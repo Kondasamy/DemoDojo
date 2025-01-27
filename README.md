@@ -1,9 +1,9 @@
-# DemoDojo
+# <img src="extension/chrome-extension/public/logo.svg" alt="DemoDojo Logo" width="30" />  DemoDojo
 A place to master and perfect your interactive demos
 
-<img src="extension/chrome-extension/public/logo.svg" alt="DemoDojo Logo" width="20" />
+**DemoDojo** is a  screen recording tool and video editor that enables users to create professional-quality screen recordings with automatic zooms and pans. 
 
-<img src="docs/images/extension.png" alt="DemoDojo extension" width="50" />
+<img src="docs/images/extension.png" alt="DemoDojo extension" width="200" />
 
 # Documentation
 
