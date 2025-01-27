@@ -51,11 +51,16 @@ const Popup = () => {
   };
 
   return (
-    <div className={`min-h-screen w-80 p-4 ${isLight ? 'bg-white' : 'bg-gray-900'}`}>
+    <div className={`min-h-screen w-80 p-10 ${isLight ? 'bg-white' : 'bg-gray-900'}`}>
       <div className="space-y-6">
-        <h1 className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-          DemoDojo Recorder
+        <h1 className={`text-2xl font-bold ${isLight ? 'text-purple-900' : 'text-white text-center'}`}>
+          <span className="inline-block w-10 h-10"><img src="/icon-128.png" alt="DemoDojo" className="w-full h-full" /></span>
+          <span className="inline-block pl-6">DemoDojo</span>
         </h1>
+
+        <p className={`text-sm text-gray-600 ${isLight ? 'text-gray-900' : 'text-gray-300'}`}>
+          Record your screen and create interactive demos.
+        </p>
 
         {/* Settings Section */}
         <div className="space-y-4">
@@ -66,7 +71,7 @@ const Popup = () => {
             <button
               onClick={() => setSettings(s => ({ ...s, audio: !s.audio }))}
               className={`relative inline-flex h-6 w-11 items-center rounded-full
-                ${settings.audio ? 'bg-blue-600' : 'bg-gray-400'}`}>
+                ${settings.audio ? 'bg-purple-600' : 'bg-gray-400'}`}>
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition
                   ${settings.audio ? 'translate-x-6' : 'translate-x-1'}`}
@@ -81,7 +86,7 @@ const Popup = () => {
             <button
               onClick={() => setSettings(s => ({ ...s, hideBrowserUI: !s.hideBrowserUI }))}
               className={`relative inline-flex h-6 w-11 items-center rounded-full
-                ${settings.hideBrowserUI ? 'bg-blue-600' : 'bg-gray-400'}`}>
+                ${settings.hideBrowserUI ? 'bg-purple-600' : 'bg-gray-400'}`}>
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition
                   ${settings.hideBrowserUI ? 'translate-x-6' : 'translate-x-1'}`}
@@ -104,7 +109,7 @@ const Popup = () => {
         {/* Start Recording Button */}
         <button
           onClick={startRecording}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="w-full rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           aria-label="Start Recording">
           Start Recording
         </button>
@@ -123,18 +128,43 @@ const Popup = () => {
 
 const ToggleButton = (props: ComponentPropsWithoutRef<'button'>) => {
   const theme = useStorage(exampleThemeStorage);
+  const isLight = theme === 'light';
   return (
     <button
-      className={
-        props.className +
-        ' ' +
-        'font-bold mt-4 py-1 px-4 rounded shadow hover:scale-105 ' +
-        (theme === 'light' ? 'bg-white text-black shadow-black' : 'bg-black text-white')
-      }
-      onClick={exampleThemeStorage.toggle}>
-      {props.children}
+      className={`${props.className} flex items-center justify-center gap-2 rounded-lg border ${isLight
+        ? 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'
+        : 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700'
+        } px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
+      onClick={exampleThemeStorage.toggle}
+      aria-label={`Switch to ${isLight ? 'dark' : 'light'} mode`}
+    >
+      {isLight ? (
+        <>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+            />
+          </svg>
+          Dark Mode
+        </>
+      ) : (
+        <>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"
+            />
+          </svg>
+          Light Mode
+        </>
+      )}
     </button>
   );
 };
 
-export default withErrorBoundary(withSuspense(Popup, <div> Loading ... </div>), <div> Error Occur </div>);
+export default withErrorBoundary(withSuspense(Popup, <div> Loading ... </div>), <div> Error Occurred </div>);
