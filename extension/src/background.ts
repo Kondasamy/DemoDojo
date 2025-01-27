@@ -20,9 +20,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 export const handleStartRecording = async (sendResponse: (response: any) => void) => {
     try {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true
+        // Request screen capture access
+        const streamId = await new Promise<string>((resolve) => {
+            chrome.desktopCapture.chooseDesktopMedia(['screen', 'window', 'tab'],
+                (streamId) => resolve(streamId));
+        });
+
+        // Get the stream using the streamId
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: streamId
+                }
+            } as any,
+            audio: false
         });
 
         recordedChunks = [];

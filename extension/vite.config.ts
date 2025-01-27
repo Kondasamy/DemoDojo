@@ -43,11 +43,22 @@ export default defineConfig({
                 content: resolve(__dirname, 'src/content.ts'),
             },
             output: {
-                entryFileNames: '[name].js',
-                chunkFileNames: '[name].js',
-                assetFileNames: '[name].[ext]',
-            },
+                entryFileNames: (chunkInfo) => {
+                    return chunkInfo.name === 'background' || chunkInfo.name === 'content'
+                        ? '[name].js'
+                        : 'assets/[name].js';
+                },
+                chunkFileNames: 'assets/[name].js',
+                assetFileNames: (assetInfo) => {
+                    if (assetInfo.name === 'style.css') return 'assets/style.css';
+                    if (assetInfo.name?.endsWith('.png') || assetInfo.name?.endsWith('.svg')) return assetInfo.name;
+                    return 'assets/[name][extname]';
+                }
+            }
         },
         outDir: 'dist',
-    },
+        assetsDir: 'assets',
+        cssCodeSplit: false,
+        minify: false
+    }
 }); 
