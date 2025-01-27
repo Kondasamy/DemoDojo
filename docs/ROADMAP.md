@@ -1,15 +1,15 @@
 # DemoDojo Technical Roadmap
 
 ## Phase 1: MVP Development
-- [ ] **Browser Extension Features**
-  - [ ] Implement screen recording with MediaRecorder API
-  - [ ] Add follow-cursor zoom/pan logic
-  - [ ] Develop popup UI for recording controls (start, stop, pause)
-  - [ ] Add tooltips and recording status indicators
+- [x] **Browser Extension Features**
+  - [x] Implement screen recording with MediaRecorder API
+  - [x] ~Add follow-cursor zoom/pan logic~ Not required. Done in the editor.
+  - [x] Develop popup UI for recording controls (start, stop, pause)
+  - [x] Add tooltips and recording status indicators
 
 - [ ] **Video Upload Flow**
   - [ ] Record and assemble video blobs
-  - [ ] Upload videos to storage using presigned URLs
+  - [ ] Upload videos to storage using presigned URLs or do Local rendering
   - [ ] Optimize upload with multi-part uploads for large files
 
 - [ ] **Core Infrastructure Setup**
