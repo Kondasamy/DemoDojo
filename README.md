@@ -1,9 +1,9 @@
 # DemoDojo
 A place to master and perfect your interactive demos
 
-![DemoDojo Logo](extension/chrome-extension/public/logo.svg | width=20)
+<img src="extension/chrome-extension/public/logo.svg" alt="DemoDojo Logo" width="20" />
 
-![DemoDojo extension](docs/images/extension.png | width=50)
+<img src="docs/images/extension.png" alt="DemoDojo extension" width="50" />
 
 # Documentation
 
