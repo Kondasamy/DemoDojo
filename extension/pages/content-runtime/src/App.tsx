@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Recorder from './Recorder';
 
 interface RecordingSettings {
   audio: boolean;
@@ -9,148 +10,122 @@ interface RecordingSettings {
 
 type RecordingState = 'idle' | 'countdown' | 'recording' | 'paused';
 
-interface ChromeMediaConstraint {
-  mandatory: {
-    chromeMediaSource: string;
-    chromeMediaSourceId: string;
-  };
-}
-
-interface ExtendedMediaTrackConstraints extends MediaTrackConstraints {
-  mandatory?: {
-    chromeMediaSource: string;
-    chromeMediaSourceId: string;
-  };
-}
-
 const App = () => {
+  const isInitializedRef = useRef(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [countdown, setCountdown] = useState(3);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [clickCount, setClickCount] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [settings, setSettings] = useState<RecordingSettings>({
     audio: true,
     hideBrowserUI: false,
   });
 
+  const recorderRef = useRef<Recorder>(new Recorder());
+
+  // Handle message listening and screen capture request
   useEffect(() => {
+    if (isInitializedRef.current) {
+      console.log('App already initialized, skipping setup');
+      return;
+    }
+
+    console.log('App component mounted, initializing...');
+    isInitializedRef.current = true;
+
     const handleMessage = async (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-      console.log('Content script received message:', message);
+      console.log('Message received in content script:', {
+        type: message.type,
+        streamId: message.streamId,
+        settings: message.settings
+      });
 
       if (message.type === 'START_RECORDING') {
-        setSettings(message.settings);
-        setRecordingState('countdown');
+        if (!message.streamId) {
+          console.error('No streamId provided in START_RECORDING message');
+          sendResponse({ success: false, error: 'No streamId provided' });
+          return;
+        }
 
         try {
-          console.log('Getting media stream from streamId:', message.streamId);
+          console.log('Starting recording process...');
+          setSettings(message.settings);
+          setRecordingState('countdown');
+          setCountdown(3);
 
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              mandatory: {
-                chromeMediaSource: 'desktop',
-                chromeMediaSourceId: message.streamId,
-                displaySurface: 'browser'
-              }
-            } as ExtendedMediaTrackConstraints,
-            audio: message.settings.audio ? {
-              mandatory: {
-                chromeMediaSource: 'desktop'
-              }
-            } as ExtendedMediaTrackConstraints : false
-          });
-
-          console.log('Stream obtained successfully');
-          console.log('Video tracks:', stream.getVideoTracks().map(track => ({
-            kind: track.kind,
-            label: track.label,
-            enabled: track.enabled,
-            muted: track.muted,
-            settings: track.getSettings()
-          })));
-
-          // Create a MediaRecorder instance
-          console.log('Creating MediaRecorder...');
-          const recorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp9'
-          });
-          console.log('MediaRecorder created with state:', recorder.state);
-
-          const chunks: BlobPart[] = [];
-
-          recorder.ondataavailable = (e) => {
-            console.log('Data available event:', {
-              size: e.data.size,
-              type: e.data.type,
-              timestamp: new Date().toISOString()
-            });
-            if (e.data.size > 0) {
-              chunks.push(e.data);
-              console.log('Total chunks:', chunks.length);
-            }
-          };
-
-          recorder.onerror = (event) => {
-            console.error('MediaRecorder error:', event);
-            if (event instanceof Event && 'error' in event) {
-              const error = (event as any).error;
-              toast.error(`Recording error: ${error?.name || 'Unknown error'}`);
-            } else {
-              toast.error('An error occurred during recording');
-            }
-          };
-
-          recorder.onstart = () => {
-            console.log('MediaRecorder started');
-            toast.success('Recording started');
-          };
-
-          recorder.onpause = () => {
-            console.log('MediaRecorder paused');
-            toast.info('Recording paused');
-          };
-
-          recorder.onresume = () => {
-            console.log('MediaRecorder resumed');
-            toast.info('Recording resumed');
-          };
-
-          recorder.onstop = () => {
-            console.log('MediaRecorder stopped, creating blob...');
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            console.log('Blob created:', blob.size, 'bytes');
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `recording-${new Date().toISOString()}.webm`;
-            a.click();
-
-            // Clean up
-            stream.getTracks().forEach(track => track.stop());
-            URL.revokeObjectURL(url);
-            console.log('Recording cleanup completed');
+          await recorderRef.current.start({
+            streamId: message.streamId,
+            audio: message.settings?.audio ?? true,
+            recordingMode: 'desktop',
+          }, (url) => {
+            console.log('Recording completed, video URL:', url);
             toast.success('Recording saved');
-          };
+          });
 
-          // Request data every second
-          recorder.start(1000);
-          console.log('MediaRecorder started with 1s timeslice');
-
-          setMediaRecorder(recorder);
+          console.log('Recording initialized successfully');
           sendResponse({ success: true, message: 'Recording initialized' });
         } catch (error) {
-          console.error('Recording setup failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error('Failed to start recording:', error);
           setRecordingState('idle');
-          sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          toast.error(`Failed to start recording: ${errorMessage}`);
+          sendResponse({ success: false, error: errorMessage });
         }
-        return true; // Keep the message channel open for the response
+        return true;
       }
     };
 
-    chrome.runtime.onMessage.addListener(handleMessage);
+    let messageListener: any = null;
+
+    try {
+      messageListener = handleMessage;
+      chrome.runtime.onMessage.addListener(messageListener);
+      console.log('Message listener added successfully');
+
+      // Request screen capture
+      console.log('Requesting screen capture...');
+      chrome.runtime.sendMessage({
+        type: 'REQUEST_SCREEN_CAPTURE',
+        settings: {
+          audio: true,
+          hideBrowserUI: false
+        }
+      }, (response) => {
+        console.log('Screen capture request response:', response);
+        if (!response?.success) {
+          const error = response?.error || 'Unknown error';
+          console.error('Screen capture request failed:', error);
+          toast.error(`Failed to start screen capture: ${error}`);
+          setRecordingState('idle');
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize recording:', error);
+      toast.error('Failed to initialize recording');
+    }
+
+    // Cleanup function
     return () => {
-      chrome.runtime.onMessage.removeListener(handleMessage);
+      console.log('Cleaning up App component...');
+      if (messageListener) {
+        try {
+          chrome.runtime.onMessage.removeListener(messageListener);
+          console.log('Message listener removed successfully');
+        } catch (error) {
+          console.error('Failed to remove message listener:', error);
+        }
+      }
+
+      if (recorderRef.current) {
+        try {
+          recorderRef.current.stop();
+          console.log('Recorder stopped successfully');
+        } catch (error) {
+          console.error('Failed to stop recorder:', error);
+        }
+      }
+
+      isInitializedRef.current = false;
     };
   }, []);
 
@@ -165,9 +140,9 @@ const App = () => {
 
     if (recordingState === 'countdown' && countdown === 0) {
       setRecordingState('recording');
-      mediaRecorder?.start();
+      console.log('Countdown complete, recording started');
     }
-  }, [countdown, recordingState, mediaRecorder]);
+  }, [countdown, recordingState]);
 
   useEffect(() => {
     if (recordingState === 'recording') {
@@ -194,15 +169,16 @@ const App = () => {
         if (e.key === 'p') {
           if (recordingState === 'recording') {
             setRecordingState('paused');
-            mediaRecorder?.pause();
+            console.log('Recording paused');
           } else if (recordingState === 'paused') {
             setRecordingState('recording');
-            mediaRecorder?.resume();
+            console.log('Recording resumed');
           }
         } else if (e.key === 'x') {
           if (recordingState === 'recording' || recordingState === 'paused') {
             setRecordingState('idle');
-            mediaRecorder?.stop();
+            recorderRef.current.stop();
+            console.log('Recording stopped');
           }
         }
       }
@@ -212,7 +188,7 @@ const App = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [recordingState, mediaRecorder]);
+  }, [recordingState]);
 
   if (recordingState === 'idle') {
     return null;
@@ -247,7 +223,7 @@ const App = () => {
                 <button
                   onClick={() => {
                     setRecordingState('paused');
-                    mediaRecorder?.pause();
+                    console.log('Recording paused');
                   }}
                   className="rounded bg-yellow-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
                   aria-label="Pause Recording"
@@ -258,7 +234,7 @@ const App = () => {
                 <button
                   onClick={() => {
                     setRecordingState('recording');
-                    mediaRecorder?.resume();
+                    console.log('Recording resumed');
                   }}
                   className="rounded bg-green-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                   aria-label="Resume Recording"
@@ -269,7 +245,8 @@ const App = () => {
               <button
                 onClick={() => {
                   setRecordingState('idle');
-                  mediaRecorder?.stop();
+                  recorderRef.current.stop();
+                  console.log('Recording stopped');
                 }}
                 className="rounded bg-red-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                 aria-label="Stop Recording"

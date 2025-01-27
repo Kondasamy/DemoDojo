@@ -60,6 +60,7 @@ const NewTab = () => {
       await new Promise<void>((resolve) => {
         const checkTab = () => {
           chrome.tabs.get(tab.id!, (updatedTab) => {
+            console.log('Tab status:', updatedTab.status);
             if (updatedTab.status === 'complete') {
               console.log('Tab loaded completely');
               resolve();
@@ -80,8 +81,11 @@ const NewTab = () => {
         });
         console.log('Content script injection results:', results);
       } catch (error) {
-        console.error('Failed to inject content script:', error);
-        throw new Error(`Content script injection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Failed to inject content script:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error;
       }
 
       console.log('Requesting screen capture...');
@@ -106,19 +110,31 @@ const NewTab = () => {
 
       // Send message to start recording
       try {
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          type: 'START_RECORDING',
-          settings: {
-            audio: true,
-            hideBrowserUI: false,
-          },
-          streamId,
+        const response = await new Promise<any>((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id!, {
+            type: 'START_RECORDING',
+            settings: {
+              audio: true,
+              hideBrowserUI: false,
+            },
+            streamId,
+          }, response => {
+            console.log('Received response from content script:', response);
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response);
+            }
+          });
         });
 
         console.log('Recording started with response:', response);
       } catch (error) {
-        console.error('Failed to start recording:', error);
-        throw new Error(`Failed to communicate with content script: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Failed to communicate with content script:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error;
       }
     } catch (error) {
       console.error('Recording setup failed:', {
