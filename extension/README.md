@@ -20,12 +20,7 @@ A powerful screen recording browser extension for creating demos and tutorials.
 pnpm install
 ```
 
-2. Start development server:
-```bash
-pnpm run dev
-```
-
-3. Build the extension:
+2. Build the extension:
 ```bash
 pnpm run build
 ```

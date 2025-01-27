@@ -18,12 +18,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-const handleStartRecording = async (sendResponse: (response: any) => void) => {
+export const handleStartRecording = async (sendResponse: (response: any) => void) => {
     try {
         stream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-                cursor: 'always'
-            },
+            video: true,
             audio: true
         });
 
@@ -60,7 +58,7 @@ const handleStartRecording = async (sendResponse: (response: any) => void) => {
         sendResponse({ success: true });
     } catch (error) {
         console.error('Error starting recording:', error);
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ success: false, error: (error as Error).message });
     }
 };
 
@@ -79,7 +77,7 @@ const handlePauseRecording = (sendResponse: (response: any) => void) => {
         sendResponse({ success: true });
     } catch (error) {
         console.error('Error toggling pause:', error);
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ success: false, error: (error as Error).message });
     }
 };
 
@@ -93,6 +91,6 @@ const handleStopRecording = (sendResponse: (response: any) => void) => {
         sendResponse({ success: true });
     } catch (error) {
         console.error('Error stopping recording:', error);
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ success: false, error: (error as Error).message });
     }
 }; 

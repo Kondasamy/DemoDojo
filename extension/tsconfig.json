@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "commonjs",
+    "target": "es6",
+    "strict": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "DemoDojo Browser Extension for Screen Recording",
     "scripts": {
+        "tsc": "tsc",
         "dev": "vite",
         "build": "tsc && vite build",
         "watch": "vite build --watch"
@@ -21,6 +22,7 @@
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
         "@types/chrome": "^0.0.254",
+        "@types/node": "^20.11.0",
         "@vitejs/plugin-react": "^4.2.0",
         "autoprefixer": "^10.4.16",
         "postcss": "^8.4.31",

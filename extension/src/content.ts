@@ -14,14 +14,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-const handleStartRecording = () => {
+export const handleStartRecording = () => {
     showCountdown(() => {
         startClickTracking();
         showRecordingOverlay();
     });
 };
 
-const handleStopRecording = () => {
+export const handleStopRecording = () => {
     stopClickTracking();
     removeRecordingOverlay();
 };
@@ -40,7 +40,7 @@ const showCountdown = (callback: () => void) => {
     padding: 20px 40px;
     border-radius: 10px;
     z-index: 999999;
-  `;
+    `;
 
     document.body.appendChild(countdownOverlay);
 
@@ -79,7 +79,7 @@ const showRecordingOverlay = () => {
     align-items: center;
     gap: 8px;
     z-index: 999999;
-  `;
+    `;
 
     const recordingDot = document.createElement('div');
     recordingDot.style.cssText = `
@@ -88,16 +88,16 @@ const showRecordingOverlay = () => {
     background-color: #ff4444;
     border-radius: 50%;
     animation: pulse 1.5s infinite;
-  `;
+    `;
 
     const style = document.createElement('style');
     style.textContent = `
     @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-  `;
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+        }
+    `;
 
     document.head.appendChild(style);
     recordingOverlay.appendChild(recordingDot);
@@ -140,15 +140,15 @@ const handleClick = (event: MouseEvent) => {
     pointer-events: none;
     animation: ripple 0.5s linear;
     z-index: 999999;
-  `;
+    `;
 
     const style = document.createElement('style');
     style.textContent = `
     @keyframes ripple {
-      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
     }
-  `;
+    `;
 
     document.head.appendChild(style);
     ripple.style.left = event.clientX + 'px';
