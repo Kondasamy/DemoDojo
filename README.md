@@ -1,7 +1,9 @@
 # DemoDojo
 A place to master and perfect your interactive demos
 
-![DemoDojo Logo](extension/icons/logo.svg)
+![DemoDojo Logo](extension/chrome-extension/public/logo.svg)
+
+![DemoDojo extension](docs/images/extension.png)
 
 # Documentation
 
@@ -12,8 +14,9 @@ A place to master and perfect your interactive demos
 # Modules
 This project is split into several modules:
 
-- [Chrome Extension](extension/README.md) - the Chrome extension (need to assess for Edge and Brave)
-- [Firefox Extension](extension/firefox-extension/README.md) - the Firefox extension - Not started
-- [Workspace App](workspace/README.md) - the web app - Not started
+- **Browser extension**
+    - [Chrome Extension](extension/README.md) - the Chrome extension (minor tweak for for Edge and Brave)
+    - [Firefox Extension](extension/README.md) - the Firefox extension
+- **Workspace App**
     - [API](workspace/api/README.md) - the API - Not started
     - [Database](workspace/database/README.md) - the database - Not started
