@@ -22,31 +22,63 @@ const Popup = () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+      if (!tab?.id) {
+        toast.error('No active tab found');
+        return;
+      }
+
       // Inject the content script for recording UI
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id! },
-        files: ['/content-runtime/index.iife.js'],
-      });
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['/content-runtime/index.iife.js'],
+        });
+      } catch (error) {
+        console.error('Failed to inject content script:', error);
+        toast.error(`Failed to inject recording script: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return;
+      }
 
       // Request screen capture
-      const streamId = await new Promise<string>((resolve) => {
-        chrome.desktopCapture.chooseDesktopMedia(
-          ['screen', 'window', 'tab'],
-          tab,
-          (id) => resolve(id)
+      try {
+        const streamId = await new Promise<string>((resolve, reject) => {
+          chrome.desktopCapture.chooseDesktopMedia(
+            ['screen', 'window', 'tab'],
+            tab,
+            (id) => {
+              if (!id) {
+                reject(new Error('No screen selected'));
+                return;
+              }
+              resolve(id);
+            }
+          );
+        });
+
+        // Send message to content script to start recording
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: 'START_RECORDING',
+          settings,
+          streamId,
+        });
+
+        console.log('Recording started with response:', response);
+        window.close(); // Close popup after starting
+      } catch (error) {
+        console.error('Failed to start screen capture:', error);
+        toast.error(
+          error instanceof Error
+            ? `Screen capture failed: ${error.message}`
+            : 'Screen capture was cancelled or failed'
         );
-      });
-
-      // Send message to content script to start recording
-      chrome.tabs.sendMessage(tab.id!, {
-        type: 'START_RECORDING',
-        settings,
-        streamId,
-      });
-
-      window.close(); // Close popup after starting
+      }
     } catch (error) {
-      toast.error('Failed to start recording. Please try again.');
+      console.error('Recording setup failed:', error);
+      toast.error(
+        error instanceof Error
+          ? `Setup failed: ${error.message}`
+          : 'Failed to setup recording'
+      );
     }
   };
 

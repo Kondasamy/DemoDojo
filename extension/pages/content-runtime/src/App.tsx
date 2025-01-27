@@ -9,6 +9,20 @@ interface RecordingSettings {
 
 type RecordingState = 'idle' | 'countdown' | 'recording' | 'paused';
 
+interface ChromeMediaConstraint {
+  mandatory: {
+    chromeMediaSource: string;
+    chromeMediaSourceId: string;
+  };
+}
+
+interface ExtendedMediaTrackConstraints extends MediaTrackConstraints {
+  mandatory?: {
+    chromeMediaSource: string;
+    chromeMediaSourceId: string;
+  };
+}
+
 const App = () => {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [countdown, setCountdown] = useState(3);
@@ -21,41 +35,116 @@ const App = () => {
   });
 
   useEffect(() => {
-    const handleMessage = async (message: any) => {
+    const handleMessage = async (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
+      console.log('Content script received message:', message);
+
       if (message.type === 'START_RECORDING') {
         setSettings(message.settings);
         setRecordingState('countdown');
 
         try {
-          const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: message.settings.audio
+          console.log('Getting media stream from streamId:', message.streamId);
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: message.streamId,
+                displaySurface: 'browser'
+              }
+            } as ExtendedMediaTrackConstraints,
+            audio: message.settings.audio ? {
+              mandatory: {
+                chromeMediaSource: 'desktop'
+              }
+            } as ExtendedMediaTrackConstraints : false
           });
 
-          const recorder = new MediaRecorder(stream);
+          console.log('Stream obtained successfully');
+          console.log('Video tracks:', stream.getVideoTracks().map(track => ({
+            kind: track.kind,
+            label: track.label,
+            enabled: track.enabled,
+            muted: track.muted,
+            settings: track.getSettings()
+          })));
+
+          // Create a MediaRecorder instance
+          console.log('Creating MediaRecorder...');
+          const recorder = new MediaRecorder(stream, {
+            mimeType: 'video/webm;codecs=vp9'
+          });
+          console.log('MediaRecorder created with state:', recorder.state);
+
           const chunks: BlobPart[] = [];
 
           recorder.ondataavailable = (e) => {
+            console.log('Data available event:', {
+              size: e.data.size,
+              type: e.data.type,
+              timestamp: new Date().toISOString()
+            });
             if (e.data.size > 0) {
               chunks.push(e.data);
+              console.log('Total chunks:', chunks.length);
             }
           };
 
+          recorder.onerror = (event) => {
+            console.error('MediaRecorder error:', event);
+            if (event instanceof Event && 'error' in event) {
+              const error = (event as any).error;
+              toast.error(`Recording error: ${error?.name || 'Unknown error'}`);
+            } else {
+              toast.error('An error occurred during recording');
+            }
+          };
+
+          recorder.onstart = () => {
+            console.log('MediaRecorder started');
+            toast.success('Recording started');
+          };
+
+          recorder.onpause = () => {
+            console.log('MediaRecorder paused');
+            toast.info('Recording paused');
+          };
+
+          recorder.onresume = () => {
+            console.log('MediaRecorder resumed');
+            toast.info('Recording resumed');
+          };
+
           recorder.onstop = () => {
+            console.log('MediaRecorder stopped, creating blob...');
             const blob = new Blob(chunks, { type: 'video/webm' });
+            console.log('Blob created:', blob.size, 'bytes');
+
             const url = URL.createObjectURL(blob);
-            // Handle the recording (e.g., upload to cloud or download)
             const a = document.createElement('a');
             a.href = url;
             a.download = `recording-${new Date().toISOString()}.webm`;
             a.click();
+
+            // Clean up
+            stream.getTracks().forEach(track => track.stop());
+            URL.revokeObjectURL(url);
+            console.log('Recording cleanup completed');
+            toast.success('Recording saved');
           };
 
+          // Request data every second
+          recorder.start(1000);
+          console.log('MediaRecorder started with 1s timeslice');
+
           setMediaRecorder(recorder);
+          sendResponse({ success: true, message: 'Recording initialized' });
         } catch (error) {
-          toast.error('Failed to start recording');
+          console.error('Recording setup failed:', error);
           setRecordingState('idle');
+          sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
         }
+        return true; // Keep the message channel open for the response
       }
     };
 

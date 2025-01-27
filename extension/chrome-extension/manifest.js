@@ -65,16 +65,28 @@ const manifest = withSidePanel({
   },
   content_scripts: [
     {
-      matches: ['http://*/*', 'https://*/*', '<all_urls>'],
+      matches: [
+        'http://*/*',
+        'https://*/*',
+        '<all_urls>'
+      ],
       js: ['content/index.iife.js'],
     },
     {
-      matches: ['http://*/*', 'https://*/*', '<all_urls>'],
+      matches: [
+        'http://*/*',
+        'https://*/*',
+        '<all_urls>'
+      ],
       js: ['content-ui/index.iife.js'],
     },
     {
-      matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-      css: ['content.css'], // public folder
+      matches: [
+        'http://*/*',
+        'https://*/*',
+        '<all_urls>'
+      ],
+      css: ['content.css'],
     },
   ],
   devtools_page: 'devtools/index.html',
