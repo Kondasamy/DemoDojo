@@ -20,5 +20,30 @@ export default defineConfig({
       '@types': resolve(srcDir, 'types')
     },
   },
-  plugins: [react(), crx({ manifest })],
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        background: resolve(srcDir, 'background.ts'),
+        content: resolve(srcDir, 'content.ts'),
+      },
+    },
+  },
+  plugins: [
+    react(),
+    crx({
+      manifest,
+      contentScripts: {
+        injectCss: true,
+      },
+    }),
+  ],
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      port: 5173,
+    },
+  },
 });

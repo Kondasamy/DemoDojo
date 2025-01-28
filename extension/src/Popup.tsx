@@ -139,10 +139,12 @@ const Popup = () => {
     }, [recordingState.isRecording, recordingState.isPaused]);
 
     const handleStartRecording = async () => {
+        console.log('[DemoDojo] Starting recording process');
         setIsCountingDown(true);
 
         // Countdown timer
         for (let i = 3; i > 0; i--) {
+            console.log('[DemoDojo] Countdown:', i);
             setCountdown(i);
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -150,49 +152,61 @@ const Popup = () => {
         setIsCountingDown(false);
 
         try {
+            console.log('[DemoDojo] Getting active tab');
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
             if (!tab?.id) {
+                console.error('[DemoDojo] No active tab found');
                 toast.error('No active tab found');
                 return;
             }
 
+            console.log('[DemoDojo] Active tab:', { id: tab.id, url: tab.url });
+
             // Check if recording is already in progress
             if (recordingState.isRecording) {
+                console.warn('[DemoDojo] Recording already in progress');
                 toast.error('Recording is already in progress');
                 return;
             }
 
             // Inject content script
             try {
+                console.log('[DemoDojo] Injecting content script');
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
-                    files: ['/content-runtime/index.iife.js'],
+                    files: ['/content.js']
                 });
 
+                console.log('[DemoDojo] Content script injected successfully');
                 await new Promise(resolve => setTimeout(resolve, 500));
             } catch (error) {
+                console.error('[DemoDojo] Failed to inject content script:', error);
                 toast.error('Failed to inject recording script');
                 return;
             }
 
             // Request screen capture
             try {
+                console.log('[DemoDojo] Requesting screen capture');
                 const streamId = await new Promise<string>((resolve, reject) => {
                     chrome.desktopCapture.chooseDesktopMedia(
                         ['screen', 'window', 'tab'],
                         tab,
                         (id) => {
                             if (!id) {
+                                console.error('[DemoDojo] No screen selected');
                                 reject(new Error('No screen selected'));
                                 return;
                             }
+                            console.log('[DemoDojo] Screen capture ID obtained:', id);
                             resolve(id);
                         }
                     );
                 });
 
                 // Start recording
+                console.log('[DemoDojo] Sending START_RECORDING message with settings:', settings);
                 const response = await new Promise<any>((resolve, reject) => {
                     chrome.tabs.sendMessage(tab.id!, {
                         type: 'START_RECORDING',
@@ -200,25 +214,31 @@ const Popup = () => {
                         streamId,
                     }, response => {
                         if (chrome.runtime.lastError) {
+                            console.error('[DemoDojo] Runtime error:', chrome.runtime.lastError);
                             reject(new Error(chrome.runtime.lastError.message));
                         } else {
+                            console.log('[DemoDojo] Received response:', response);
                             resolve(response);
                         }
                     });
                 });
 
                 if (!response?.success) {
+                    console.error('[DemoDojo] Failed to start recording:', response?.error);
                     throw new Error(response?.error || 'Failed to start recording');
                 }
 
+                console.log('[DemoDojo] Recording started successfully');
                 setRecordingState(prev => ({ ...prev, isRecording: true }));
                 setScreenState('recording');
                 toast.success('Recording started!');
                 window.close();
             } catch (error) {
+                console.error('[DemoDojo] Screen capture error:', error);
                 toast.error('Screen capture was cancelled or failed');
             }
         } catch (error) {
+            console.error('[DemoDojo] Setup error:', error);
             setIsCountingDown(false);
             toast.error(
                 error instanceof Error

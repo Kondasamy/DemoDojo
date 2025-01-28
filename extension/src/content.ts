@@ -1,42 +1,73 @@
-interface RecordingSettings {
+console.log('[DemoDojo] Content script loaded');
+
+type RecordingSettings = {
     audio: boolean;
     hideBrowserUI: boolean;
     microphone: MediaDeviceInfo | null;
-}
+};
 
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
 let clickCount = 0;
-let stream: MediaStream | null = null;
 
 // Listen for messages from the popup
-chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
-    switch (message.type) {
-        case 'START_RECORDING':
-            handleStartRecording(message.settings, message.streamId)
-                .then(() => sendResponse({ success: true }))
-                .catch(error => sendResponse({ success: false, error: error.message }));
-            return true; // Keep the message channel open for async response
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    console.log('[DemoDojo] Content script received message:', message);
 
-        case 'PAUSE_RECORDING':
-            if (mediaRecorder?.state === 'recording') {
-                mediaRecorder.pause();
+    if (message.type === 'START_RECORDING') {
+        console.log('[DemoDojo] Starting recording with settings:', message.settings);
+        console.log('[DemoDojo] Stream ID:', message.streamId);
+
+        startRecording(message.streamId, message.settings)
+            .then(() => {
+                console.log('[DemoDojo] Recording started successfully');
                 sendResponse({ success: true });
-            }
-            break;
+            })
+            .catch((error) => {
+                console.error('[DemoDojo] Failed to start recording:', error);
+                sendResponse({ success: false, error: error.message });
+            });
 
-        case 'RESUME_RECORDING':
-            if (mediaRecorder?.state === 'paused') {
-                mediaRecorder.resume();
-                sendResponse({ success: true });
-            }
-            break;
+        return true; // Keep the message channel open for the async response
+    }
 
-        case 'STOP_RECORDING':
-            handleStopRecording()
-                .then(videoUrl => sendResponse({ success: true, videoUrl }))
-                .catch(error => sendResponse({ success: false, error: error.message }));
-            return true; // Keep the message channel open for async response
+    if (message.type === 'STOP_RECORDING') {
+        console.log('[DemoDojo] Stopping recording');
+        stopRecording()
+            .then((videoUrl) => {
+                console.log('[DemoDojo] Recording stopped, video URL created');
+                sendResponse({ success: true, videoUrl });
+            })
+            .catch((error) => {
+                console.error('[DemoDojo] Failed to stop recording:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+
+        return true;
+    }
+
+    if (message.type === 'PAUSE_RECORDING') {
+        console.log('[DemoDojo] Pausing recording');
+        if (mediaRecorder?.state === 'recording') {
+            mediaRecorder.pause();
+            sendResponse({ success: true });
+        } else {
+            console.warn('[DemoDojo] Cannot pause - recorder state:', mediaRecorder?.state);
+            sendResponse({ success: false, error: 'Recorder not in recording state' });
+        }
+        return true;
+    }
+
+    if (message.type === 'RESUME_RECORDING') {
+        console.log('[DemoDojo] Resuming recording');
+        if (mediaRecorder?.state === 'paused') {
+            mediaRecorder.resume();
+            sendResponse({ success: true });
+        } else {
+            console.warn('[DemoDojo] Cannot resume - recorder state:', mediaRecorder?.state);
+            sendResponse({ success: false, error: 'Recorder not in paused state' });
+        }
+        return true;
     }
 });
 
@@ -52,89 +83,103 @@ document.addEventListener('click', () => {
     }
 });
 
-async function handleStartRecording(settings: RecordingSettings, streamId: string) {
+async function startRecording(streamId: string, settings: RecordingSettings) {
     try {
-        // Set up screen capture
-        const screenStream = await (navigator.mediaDevices as any).getUserMedia({
+        console.log('[DemoDojo] Getting media stream with ID:', streamId);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: settings.audio ? {
+                deviceId: settings.microphone?.deviceId
+            } : false,
             video: {
-                // Using any type here because Chrome's desktop capture API is not standard
-                chromeMediaSource: 'desktop',
-                chromeMediaSourceId: streamId
-            }
+                mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: streamId,
+                }
+            } as any
         });
 
-        // Set up audio if enabled
-        let audioStream: MediaStream | null = null;
-        if (settings.audio && settings.microphone?.deviceId) {
-            audioStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: settings.microphone.deviceId
-                }
-            });
-        }
+        console.log('[DemoDojo] Media stream obtained:', stream.getTracks().map(t => ({
+            kind: t.kind,
+            label: t.label,
+            enabled: t.enabled,
+            state: t.readyState
+        })));
 
-        // Combine streams if needed
-        const tracks = [...screenStream.getTracks()];
-        if (audioStream) {
-            tracks.push(...audioStream.getAudioTracks());
-        }
-
-        stream = new MediaStream(tracks);
-
-        // Initialize MediaRecorder
+        recordedChunks = [];
         mediaRecorder = new MediaRecorder(stream, {
             mimeType: 'video/webm;codecs=vp9'
         });
 
-        // Handle data available event
+        console.log('[DemoDojo] MediaRecorder created with state:', mediaRecorder.state);
+
         mediaRecorder.ondataavailable = (event) => {
+            console.log('[DemoDojo] Data available event, size:', event.data.size);
             if (event.data.size > 0) {
                 recordedChunks.push(event.data);
             }
         };
 
-        // Reset click counter
-        clickCount = 0;
+        mediaRecorder.onstart = () => {
+            console.log('[DemoDojo] MediaRecorder started');
+        };
 
-        // Start recording
+        mediaRecorder.onpause = () => {
+            console.log('[DemoDojo] MediaRecorder paused');
+        };
+
+        mediaRecorder.onresume = () => {
+            console.log('[DemoDojo] MediaRecorder resumed');
+        };
+
+        mediaRecorder.onstop = () => {
+            console.log('[DemoDojo] MediaRecorder stopped');
+            stream.getTracks().forEach(track => {
+                console.log('[DemoDojo] Stopping track:', track.kind, track.label);
+                track.stop();
+            });
+        };
+
+        mediaRecorder.onerror = (event) => {
+            console.error('[DemoDojo] MediaRecorder error:', event);
+        };
+
         mediaRecorder.start(1000); // Collect data every second
 
         // Hide browser UI if requested
         if (settings.hideBrowserUI) {
             document.documentElement.requestFullscreen();
         }
+
+        return true;
     } catch (error) {
-        console.error('Failed to start recording:', error);
+        console.error('[DemoDojo] Error in startRecording:', error);
         throw error;
     }
 }
 
-async function handleStopRecording(): Promise<string> {
+async function stopRecording(): Promise<string> {
     return new Promise((resolve, reject) => {
+        console.log('[DemoDojo] Stopping recording, recorder state:', mediaRecorder?.state);
+
         if (!mediaRecorder) {
-            reject(new Error('No recording in progress'));
+            const error = 'No MediaRecorder instance found';
+            console.error('[DemoDojo]', error);
+            reject(new Error(error));
             return;
         }
 
         mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-
-            // Clean up
-            recordedChunks = [];
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
+            try {
+                console.log('[DemoDojo] Creating blob from chunks:', recordedChunks.length);
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                console.log('[DemoDojo] Blob URL created:', url);
+                resolve(url);
+            } catch (error) {
+                console.error('[DemoDojo] Error creating blob:', error);
+                reject(error);
             }
-            mediaRecorder = null;
-            clickCount = 0;
-
-            // Exit fullscreen if needed
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
-
-            resolve(url);
         };
 
         mediaRecorder.stop();
@@ -156,7 +201,7 @@ document.addEventListener('keydown', (event) => {
         }
     } else if (event.code === 'Escape' && !event.repeat) {
         event.preventDefault();
-        handleStopRecording()
+        stopRecording()
             .then(videoUrl => {
                 chrome.runtime.sendMessage({
                     type: 'RECORDING_STOPPED',
@@ -165,4 +210,13 @@ document.addEventListener('keydown', (event) => {
             })
             .catch(console.error);
     }
+});
+
+// Log any unhandled errors
+window.addEventListener('error', (event) => {
+    console.error('[DemoDojo] Unhandled error:', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[DemoDojo] Unhandled promise rejection:', event.reason);
 }); 
