@@ -175,7 +175,7 @@ const Popup = () => {
                 console.log('[DemoDojo] Injecting content script');
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
-                    files: ['/content.js']
+                    files: ['/assets/content.js']
                 });
 
                 console.log('[DemoDojo] Content script injected successfully');
