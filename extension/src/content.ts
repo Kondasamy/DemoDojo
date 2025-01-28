@@ -1,20 +1,27 @@
 console.log('[DemoDojo] Content script loaded');
 
-type RecordingSettings = {
+interface RecordingSettings {
     audio: boolean;
     hideBrowserUI: boolean;
     microphone: MediaDeviceInfo | null;
-};
+}
+
+interface Message {
+    type: string;
+    settings?: RecordingSettings;
+    streamId?: string;
+    videoUrl?: string;
+}
 
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
 let clickCount = 0;
 
 // Listen for messages from the popup
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
     console.log('[DemoDojo] Content script received message:', message);
 
-    if (message.type === 'START_RECORDING') {
+    if (message.type === 'START_RECORDING' && message.settings && message.streamId) {
         console.log('[DemoDojo] Starting recording with settings:', message.settings);
         console.log('[DemoDojo] Stream ID:', message.streamId);
 
@@ -83,7 +90,7 @@ document.addEventListener('click', () => {
     }
 });
 
-async function startRecording(streamId: string, settings: RecordingSettings) {
+async function startRecording(streamId: string, settings: RecordingSettings): Promise<boolean> {
     try {
         console.log('[DemoDojo] Getting media stream with ID:', streamId);
 
@@ -113,7 +120,7 @@ async function startRecording(streamId: string, settings: RecordingSettings) {
 
         console.log('[DemoDojo] MediaRecorder created with state:', mediaRecorder.state);
 
-        mediaRecorder.ondataavailable = (event) => {
+        mediaRecorder.ondataavailable = (event: BlobEvent) => {
             console.log('[DemoDojo] Data available event, size:', event.data.size);
             if (event.data.size > 0) {
                 recordedChunks.push(event.data);
@@ -140,7 +147,7 @@ async function startRecording(streamId: string, settings: RecordingSettings) {
             });
         };
 
-        mediaRecorder.onerror = (event) => {
+        mediaRecorder.onerror = (event: Event) => {
             console.error('[DemoDojo] MediaRecorder error:', event);
         };
 
@@ -187,7 +194,7 @@ async function stopRecording(): Promise<string> {
 }
 
 // Handle keyboard shortcuts
-document.addEventListener('keydown', (event) => {
+document.addEventListener('keydown', (event: KeyboardEvent) => {
     if (!mediaRecorder) return;
 
     if (event.code === 'Space' && !event.repeat) {
@@ -213,10 +220,10 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Log any unhandled errors
-window.addEventListener('error', (event) => {
+window.addEventListener('error', (event: ErrorEvent) => {
     console.error('[DemoDojo] Unhandled error:', event.error);
 });
 
-window.addEventListener('unhandledrejection', (event) => {
+window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     console.error('[DemoDojo] Unhandled promise rejection:', event.reason);
 }); 

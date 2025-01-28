@@ -1,7 +1,14 @@
 /// <reference types="vite/client" />
 /// <reference lib="webworker" />
+/// <reference types="chrome" />
 
 declare const self: ServiceWorkerGlobalScope;
+
+type Message = {
+    type: string;
+    count?: number;
+    data?: any;
+};
 
 console.log('[DemoDojo] Service worker initializing');
 
@@ -22,7 +29,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Handle messages from content scripts and popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
     console.log('[DemoDojo] Received message:', { message, from: sender?.tab?.id });
 
     switch (message.type) {
@@ -65,10 +72,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Handle errors in service worker context
-self.addEventListener('error', (event) => {
+self.addEventListener('error', (event: ErrorEvent) => {
     console.error('[DemoDojo] Service worker error:', event.error);
 });
 
-self.addEventListener('unhandledrejection', (event) => {
+self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     console.error('[DemoDojo] Service worker unhandled rejection:', event.reason);
 }); 
