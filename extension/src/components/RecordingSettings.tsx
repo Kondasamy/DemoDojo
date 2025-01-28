@@ -52,9 +52,9 @@ export const RecordingSettings: React.FC<RecordingSettingsProps> = ({
                     checked={settings.audio}
                     onChange={handleToggleAudio}
                     className={`
-                        ${settings.audio ? 'bg-blue-600' : isLight ? 'bg-gray-200' : 'bg-gray-600'}
+                        ${settings.audio ? 'bg-purple-600' : isLight ? 'bg-gray-200' : 'bg-gray-600'}
                         relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500
+                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500
                         focus:ring-offset-2
                     `}
                 >
@@ -88,9 +88,9 @@ export const RecordingSettings: React.FC<RecordingSettingsProps> = ({
                         className={`
                             w-full rounded-md border px-3 py-2 text-sm
                             ${isLight
-                                ? 'border-gray-300 bg-white text-gray-900 focus:border-blue-500'
-                                : 'border-gray-600 bg-gray-700 text-white focus:border-blue-400'}
-                            focus:outline-none focus:ring-2 focus:ring-blue-500
+                                ? 'border-gray-300 bg-white text-gray-900 focus:border-purple-500'
+                                : 'border-gray-600 bg-gray-700 text-white focus:border-purple-400'}
+                            focus:outline-none focus:ring-2 focus:ring-purple-500
                         `}
                     >
                         <option value="">Select a microphone</option>
@@ -109,7 +109,7 @@ export const RecordingSettings: React.FC<RecordingSettingsProps> = ({
                             </span>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                                 <div
-                                    className="h-full bg-blue-600 transition-all duration-150"
+                                    className="h-full bg-purple-600 transition-all duration-150"
                                     style={{ width: `${Math.min(100, (audioLevel / 255) * 100)}%` }}
                                     role="progressbar"
                                     aria-valuenow={Math.round((audioLevel / 255) * 100)}
@@ -127,16 +127,16 @@ export const RecordingSettings: React.FC<RecordingSettingsProps> = ({
                 <div className="flex items-center space-x-2">
                     <ComputerDesktopIcon className={`h-5 w-5 ${isLight ? 'text-gray-600' : 'text-gray-300'}`} />
                     <span className={`text-sm ${isLight ? 'text-gray-700' : 'text-gray-200'}`}>
-                        Hide Browser UI
+                        Hide Browser Toolbars
                     </span>
                 </div>
                 <Switch
                     checked={settings.hideBrowserUI}
                     onChange={handleToggleBrowserUI}
                     className={`
-                        ${settings.hideBrowserUI ? 'bg-blue-600' : isLight ? 'bg-gray-200' : 'bg-gray-600'}
+                        ${settings.hideBrowserUI ? 'bg-purple-600' : isLight ? 'bg-gray-200' : 'bg-gray-600'}
                         relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500
+                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500
                         focus:ring-offset-2
                     `}
                 >

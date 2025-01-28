@@ -42,7 +42,7 @@ const Popup = () => {
     const [recordedVideoUrl, setRecordedVideoUrl] = useState<string>('');
 
     const [settings, setSettings] = useState<RecordingSettings>({
-        audio: true,
+        audio: false,
         hideBrowserUI: false,
         microphone: null,
     });

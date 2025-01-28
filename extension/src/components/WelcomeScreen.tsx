@@ -8,7 +8,7 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartRecording, isLight }) => {
     return (
         <div className={`space-y-6 text-center ${isLight ? 'text-gray-900' : 'text-white'}`}>
-            <h1 className="text-2xl font-bold">Welcome to DemoDojo</h1>
+            <h1 className="text-2xl font-bold"> <img src="src/assets/icon32.png" alt="DemoDojo" className="w-16 h-16 mx-auto" /> Welcome to DemoDojo</h1>
 
             <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-gray-300'}`}>
                 Create beautiful screen recordings with just a few clicks
@@ -18,10 +18,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartRecording, 
                 onClick={onStartRecording}
                 onKeyDown={(e) => e.key === 'Enter' && onStartRecording()}
                 className={`
-                    w-full rounded-lg bg-blue-600 px-4 py-3 text-white shadow-lg
+                    w-full rounded-lg bg-purple-600 px-4 py-3 text-white shadow-lg
                     transition-all duration-200 ease-in-out
-                    hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    active:bg-blue-800
+                    hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+                    active:bg-purple-800
                 `}
                 tabIndex={0}
                 aria-label="Start Recording"

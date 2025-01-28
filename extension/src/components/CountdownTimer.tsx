@@ -15,7 +15,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ count, isLight }
             <div
                 className={`
                     flex h-32 w-32 items-center justify-center rounded-full 
-                    ${isLight ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'}
+                    ${isLight ? 'bg-gray-600 text-gray-900' : 'bg-white text-gray-900'}
                     shadow-lg transition-all duration-300 ease-in-out
                 `}
             >

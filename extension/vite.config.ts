@@ -20,30 +20,5 @@ export default defineConfig({
       '@types': resolve(srcDir, 'types')
     },
   },
-  plugins: [
-    react(),
-    crx({
-      manifest,
-      contentScripts: {
-        injectCss: true,
-      },
-      browser: 'chrome'
-    })
-  ],
-  build: {
-    emptyOutDir: true,
-    outDir: 'dist',
-    rollupOptions: {
-      input: {
-        popup: resolve(rootDir, 'index.html'),
-        content: resolve(srcDir, 'content.ts'),
-        background: resolve(srcDir, 'background.ts'),
-      },
-      output: {
-        chunkFileNames: 'assets/[name].[hash].js',
-        entryFileNames: '[name].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
-      }
-    },
-  },
+  plugins: [react(), crx({ manifest })],
 });
