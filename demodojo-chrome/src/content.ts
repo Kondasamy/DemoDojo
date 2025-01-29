@@ -66,6 +66,12 @@ document.addEventListener("click", async (event) => {
 
     try {
         const target = event.target as HTMLElement
+
+        // Don't process clicks on the recording interface
+        if (target.closest('.plasmo-fixed')) {
+            return;
+        }
+
         log.debug("Click detected:", {
             x: event.clientX,
             y: event.clientY,
@@ -74,30 +80,30 @@ document.addEventListener("click", async (event) => {
             className: target.className
         })
 
-        // Send click event to background
-        const response = await sendToBackground({
-            name: "recording",
-            body: {
-                type: "UPDATE_CLICK_COUNT",
-                data: {
-                    x: event.clientX,
-                    y: event.clientY,
-                    element: target.tagName,
-                    id: target.id,
-                    className: target.className
+        // Send click event to background using Plasmo's messaging
+        try {
+            await sendToBackground({
+                name: "recording",
+                body: {
+                    type: "UPDATE_CLICK_COUNT",
+                    data: {
+                        x: event.clientX,
+                        y: event.clientY,
+                        element: target.tagName,
+                        id: target.id,
+                        className: target.className
+                    }
                 }
-            }
-        })
-
-        if (!response.success) {
-            throw new Error(response.error)
+            })
+            log.debug("Click recorded successfully")
+        } catch (error) {
+            // Don't throw error, just log it
+            log.error("Failed to record click:", error)
         }
-
-        log.debug("Click recorded successfully")
     } catch (error) {
-        log.error("Failed to record click:", error)
+        log.error("Failed to process click:", error)
     }
-}, true)
+}, { capture: true })
 
 // Track keyboard shortcuts
 document.addEventListener("keydown", async (event) => {

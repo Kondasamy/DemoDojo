@@ -32,10 +32,13 @@ export const RecordingInterface: React.FC<RecordingInterfaceProps> = ({
 
     return (
         <div className="plasmo-fixed plasmo-inset-0 plasmo-flex plasmo-items-center plasmo-justify-center">
-            <div className={`plasmo-w-[360px] plasmo-space-y-4 plasmo-rounded-lg plasmo-p-4 plasmo-backdrop-blur plasmo-shadow-lg ${isLight
-                ? "plasmo-bg-white/90 plasmo-shadow-gray-200/50"
-                : "plasmo-bg-gray-900/90 plasmo-shadow-gray-900/50"
-                }`}>
+            <div
+                className={`plasmo-w-[360px] plasmo-space-y-4 plasmo-rounded-lg plasmo-p-4 plasmo-backdrop-blur plasmo-shadow-lg ${isLight
+                    ? "plasmo-bg-white/90 plasmo-shadow-gray-200/50"
+                    : "plasmo-bg-gray-900/90 plasmo-shadow-gray-900/50"
+                    }`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Recording Status */}
                 <div className="plasmo-flex plasmo-items-center plasmo-justify-between">
                     <div className="plasmo-flex plasmo-items-center plasmo-space-x-2">
@@ -74,7 +77,10 @@ export const RecordingInterface: React.FC<RecordingInterfaceProps> = ({
                 {/* Control Buttons */}
                 <div className="plasmo-grid plasmo-grid-cols-3 plasmo-gap-2">
                     <button
-                        onClick={onStop}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onStop();
+                        }}
                         onKeyDown={(e) => e.key === "Enter" && onStop()}
                         className={`
                             plasmo-flex plasmo-items-center plasmo-justify-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-3 plasmo-py-2 
@@ -92,7 +98,10 @@ export const RecordingInterface: React.FC<RecordingInterfaceProps> = ({
                     </button>
 
                     <button
-                        onClick={onPauseResume}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPauseResume();
+                        }}
                         onKeyDown={(e) => e.key === "Enter" && onPauseResume()}
                         className={`
                             plasmo-flex plasmo-items-center plasmo-justify-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-3 plasmo-py-2 
@@ -114,7 +123,10 @@ export const RecordingInterface: React.FC<RecordingInterfaceProps> = ({
                     </button>
 
                     <button
-                        onClick={onFinish}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onFinish();
+                        }}
                         onKeyDown={(e) => e.key === "Enter" && onFinish()}
                         className={`
                             plasmo-flex plasmo-items-center plasmo-justify-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-3 plasmo-py-2 

@@ -1,9 +1,9 @@
-# <img src="extension/chrome-extension/public/logo.svg" alt="DemoDojo Logo" width="30" />  DemoDojo
+# <img src="demodojo-chrome/src/assets/icon.png" alt="DemoDojo Logo" width="30" />  DemoDojo
 A place to master and perfect your interactive demos
 
 **DemoDojo** is a  screen recording tool and video editor that enables users to create professional-quality screen recordings with automatic zooms and pans. 
 
-<img src="docs/images/extension.png" alt="DemoDojo extension" width="200" />
+[![DemoDojo Demo](https://img.youtube.com/vi/-6Oa4Y167O4/0.jpg)](https://www.youtube.com/watch?v=-6Oa4Y167O4)
 
 # Documentation
 
@@ -15,8 +15,8 @@ A place to master and perfect your interactive demos
 This project is split into several modules:
 
 - **Browser extension**
-    - [Chrome Extension](extension/README.md) - the Chrome extension (minor tweak for for Edge and Brave)
-    - [Firefox Extension](extension/README.md) - the Firefox extension
+    - [Chrome Extension](demodojo-chrome/README.md) - the Chrome extension (minor tweak for for Edge and Brave)
+    - [Firefox Extension](demodojo-firefox/README.md) - the Firefox extension - Not started
 - **Workspace App**
     - [API](workspace/api/README.md) - the API - Not started
     - [Database](workspace/database/README.md) - the database - Not started

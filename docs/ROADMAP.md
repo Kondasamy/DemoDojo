@@ -3,7 +3,7 @@
 ## Phase 1: MVP Development
 - [x] **Browser Extension Features**
   - [x] Implement screen recording with MediaRecorder API
-  - [x] ~Add follow-cursor zoom/pan logic~ Not required. Done in the editor.
+  - [x] Add follow-cursor zoom/pan logic Not required. Done in the editor.
   - [x] Develop popup UI for recording controls (start, stop, pause)
   - [x] Add tooltips and recording status indicators
 

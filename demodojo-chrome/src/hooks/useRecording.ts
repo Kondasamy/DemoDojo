@@ -80,7 +80,7 @@ export function useRecording() {
             // Request screen share with optimized settings
             const mediaStream = await navigator.mediaDevices.getDisplayMedia({
                 video: {
-                    displaySurface: "monitor",
+                    displaySurface: "browser",
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                     frameRate: { ideal: 30 }
@@ -89,11 +89,7 @@ export function useRecording() {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true
-                },
-                // @ts-ignore - Chrome specific options
-                preferCurrentTab: false,
-                systemAudio: "include",
-                selfBrowserSurface: "exclude" // Prevent recording from stopping when clicking extension
+                }
             })
 
             log.info("Screen selected successfully")
@@ -107,6 +103,34 @@ export function useRecording() {
             const videoTrack = mediaStream.getVideoTracks()[0]
             videoTrack.contentHint = "motion"
             videoTrack.enabled = true
+
+            // Keep track of whether we initiated the stop
+            let isStoppingIntentionally = false
+
+            // Handle track ending
+            videoTrack.addEventListener('ended', (event) => {
+                log.info("Track ended event received", { isStoppingIntentionally })
+                if (!isStoppingIntentionally) {
+                    // If we didn't initiate the stop, try to restart the track
+                    event.preventDefault()
+                    event.stopPropagation()
+                    log.info("Attempting to prevent unintended track stop")
+                    return
+                }
+                stopRecording()
+            })
+
+            // Override the stop method
+            const originalStop = videoTrack.stop.bind(videoTrack)
+            videoTrack.stop = function customStop() {
+                log.info("Stop called on video track")
+                // Only allow stop if we're intentionally stopping
+                if (isStoppingIntentionally) {
+                    originalStop()
+                } else {
+                    log.info("Prevented unintended track stop")
+                }
+            }
 
             setStream(mediaStream)
 
@@ -144,18 +168,13 @@ export function useRecording() {
             log.info("Recording started successfully")
             setState("recording")
 
-            // Only handle explicit stop events
-            videoTrack.onended = () => {
-                log.info("Screen share explicitly stopped by user")
-                if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                    mediaRecorder.stop()
-                }
-                reset()
-            }
-
-            // Store mediaRecorder in a ref or state if needed
-            // @ts-ignore - Adding mediaRecorder to stream for cleanup
+            // Store mediaRecorder and control flag in stream object
+            // @ts-ignore - Adding custom properties to stream
             mediaStream.recorder = mediaRecorder
+            // @ts-ignore - Adding custom properties to stream
+            mediaStream.setStoppingIntentionally = (value: boolean) => {
+                isStoppingIntentionally = value
+            }
 
         } catch (error) {
             log.error("Failed to get screen or start recording:", error)
@@ -207,6 +226,10 @@ export function useRecording() {
     const stopRecording = useCallback(async () => {
         try {
             if (stream) {
+                // Set the flag to indicate this is an intentional stop
+                // @ts-ignore - Accessing custom property
+                stream.setStoppingIntentionally(true)
+
                 // @ts-ignore - Accessing stored mediaRecorder
                 const mediaRecorder = stream.recorder
                 if (mediaRecorder && mediaRecorder.state !== "inactive") {
