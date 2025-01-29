@@ -61,48 +61,50 @@ function IndexPopup() {
   }
 
   return (
-    <div className="plasmo-w-[400px] plasmo-min-h-[300px] plasmo-bg-gradient-to-br plasmo-from-white plasmo-to-gray-50 dark:plasmo-from-gray-900 dark:plasmo-to-gray-800 plasmo-rounded-xl plasmo-shadow-lg plasmo-backdrop-blur-sm plasmo-bg-opacity-95 dark:plasmo-bg-opacity-90 plasmo-p-4">
-      {state === "idle" && (
-        <WelcomeScreen onStartRecording={startScreenSelection} />
-      )}
+    <div className="plasmo-overflow-hidden">
+      <div className="plasmo-w-[440px] plasmo-min-h-[300px] plasmo-bg-gradient-to-br plasmo-from-white plasmo-to-gray-50 dark:plasmo-from-gray-900 dark:plasmo-to-gray-800 plasmo-shadow-lg plasmo-backdrop-blur-sm plasmo-bg-opacity-50 dark:plasmo-bg-opacity-50 plasmo-p-4">
+        {state === "idle" && (
+          <WelcomeScreen onStartRecording={startScreenSelection} />
+        )}
 
-      {state === "countdown" && (
-        <CountdownTimer onComplete={handleCountdownComplete} />
-      )}
+        {state === "countdown" && (
+          <CountdownTimer onComplete={handleCountdownComplete} />
+        )}
 
-      {(state === "recording" || state === "paused") && (
-        <RecordingInterface
-          state={state}
-          duration={duration}
-          clickCount={clickCount}
-          onPauseResume={handlePauseResume}
-          onStop={stopRecording}
-          onFinish={stopRecording}
-          isLight={true}
+        {(state === "recording" || state === "paused") && (
+          <RecordingInterface
+            state={state}
+            duration={duration}
+            clickCount={clickCount}
+            onPauseResume={handlePauseResume}
+            onStop={stopRecording}
+            onFinish={stopRecording}
+            isLight={true}
+          />
+        )}
+
+        {state === "completed" && videoUrl && (
+          <PostRecordingScreen
+            videoUrl={videoUrl}
+            onEdit={handleEdit}
+            onRestart={reset}
+            onSave={handleSave}
+          />
+        )}
+
+        <ToastContainer
+          position="bottom-center"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
         />
-      )}
-
-      {state === "completed" && videoUrl && (
-        <PostRecordingScreen
-          videoUrl={videoUrl}
-          onEdit={handleEdit}
-          onRestart={reset}
-          onSave={handleSave}
-        />
-      )}
-
-      <ToastContainer
-        position="bottom-center"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-      />
+      </div>
     </div>
   )
 }
