@@ -8,11 +8,9 @@
     "tabs",
     "activeTab",
     "scripting",
-    "storage"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "storage",
+    "tabCapture",
+    "offscreen"
   ],
   "action": {
     "default_popup": "index.html",

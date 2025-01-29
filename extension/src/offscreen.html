@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DemoDojo Screen Recorder - Offscreen Document</title>
+</head>
+
+<body>
+    <script type="module">
+        import Recorder from './lib/recorder.ts'
+
+        const recorder = new Recorder()
+        let mediaRecorder = null;
+        let recordedChunks = [];
+
+        chrome.runtime.onMessage.addListener(async (message) => {
+            if (message.target !== 'offscreen') return;
+
+            if (message.type === 'start-recording' && message.data) {
+                const { streamId, width, height, audio, recordingMode } = message.data;
+                console.log("offscreen starting recording", streamId, width, height, audio, recordingMode)
+                recorder.start({
+                    streamId,
+                    width,
+                    height,
+                    audio,
+                    recordingMode,
+                }, (url) => {
+                    chrome.runtime.sendMessage({
+                        type: 'recording-completed',
+                        videoUrl: url
+                    });
+                });
+                const media = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        mandatory: {
+                            chromeMediaSource: "tab",
+                            chromeMediaSourceId: streamId,
+                        },
+                    },
+                    video: {
+                        mandatory: {
+                            chromeMediaSource: "tab",
+                            chromeMediaSourceId: streamId,
+                        },
+                    },
+                })
+
+                mediaRecorder = new MediaRecorder(media, {
+                    mimeType: 'video/webm;codecs=vp9'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    chrome.runtime.sendMessage({
+                        type: 'recording-completed',
+                        videoUrl: url
+                    });
+                    recordedChunks = [];
+                };
+                mediaRecorder.start();
+                chrome.runtime.sendMessage({ type: 'recording-started' });
+            }
+
+
+            if (message.type === 'stop-recording' && mediaRecorder) {
+                mediaRecorder.stop()
+                if (mediaRecorder?.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+
+            }
+        });
+    </script>
+</body>
+
+</html>

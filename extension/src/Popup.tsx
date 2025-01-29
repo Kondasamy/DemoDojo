@@ -11,6 +11,7 @@ interface RecordingSettings {
     audio: boolean;
     hideBrowserUI: boolean;
     microphone: MediaDeviceInfo | null;
+    recordingMode: 'tab' | 'desktop' | 'area'
 }
 
 interface RecordingState {
@@ -45,6 +46,7 @@ const Popup = () => {
         audio: false,
         hideBrowserUI: false,
         microphone: null,
+        recordingMode: 'tab'
     });
 
     // Theme detection
@@ -138,6 +140,31 @@ const Popup = () => {
         };
     }, [recordingState.isRecording, recordingState.isPaused]);
 
+    // Message listener for the recording start, stop events
+    useEffect(() => {
+        const handleContentMessages = (message: any) => {
+            if (message.type === 'RECORDING_STARTED_CONTENT') {
+                console.log('[DemoDojo] Recording started from content script');
+                setRecordingState(prev => ({ ...prev, isRecording: true }));
+                setScreenState('recording');
+                toast.success('Recording started!');
+                window.close();
+            }
+            if (message.type === 'RECORDING_COMPLETED_CONTENT') {
+                console.log('[DemoDojo] Recording completed from content script', message.videoUrl);
+                setRecordedVideoUrl(message.videoUrl);
+                setScreenState('post-recording');
+                setRecordingState(initialRecordingState);
+            }
+
+        }
+        chrome.runtime.onMessage.addListener(handleContentMessages);
+
+        return () => {
+            chrome.runtime.onMessage.removeListener(handleContentMessages)
+        }
+    }, []);
+
     const handleStartRecording = async () => {
         console.log('[DemoDojo] Starting recording process');
         setIsCountingDown(true);
@@ -186,57 +213,13 @@ const Popup = () => {
                 return;
             }
 
-            // Request screen capture
-            try {
-                console.log('[DemoDojo] Requesting screen capture');
-                const streamId = await new Promise<string>((resolve, reject) => {
-                    chrome.desktopCapture.chooseDesktopMedia(
-                        ['screen', 'window', 'tab'],
-                        tab,
-                        (id) => {
-                            if (!id) {
-                                console.error('[DemoDojo] No screen selected');
-                                reject(new Error('No screen selected'));
-                                return;
-                            }
-                            console.log('[DemoDojo] Screen capture ID obtained:', id);
-                            resolve(id);
-                        }
-                    );
-                });
+            chrome.runtime.sendMessage({
+                type: 'start-recording',
+                target: 'background',
+                data: settings
+            });
 
-                // Start recording
-                console.log('[DemoDojo] Sending START_RECORDING message with settings:', settings);
-                const response = await new Promise<any>((resolve, reject) => {
-                    chrome.tabs.sendMessage(tab.id!, {
-                        type: 'START_RECORDING',
-                        settings,
-                        streamId,
-                    }, response => {
-                        if (chrome.runtime.lastError) {
-                            console.error('[DemoDojo] Runtime error:', chrome.runtime.lastError);
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            console.log('[DemoDojo] Received response:', response);
-                            resolve(response);
-                        }
-                    });
-                });
 
-                if (!response?.success) {
-                    console.error('[DemoDojo] Failed to start recording:', response?.error);
-                    throw new Error(response?.error || 'Failed to start recording');
-                }
-
-                console.log('[DemoDojo] Recording started successfully');
-                setRecordingState(prev => ({ ...prev, isRecording: true }));
-                setScreenState('recording');
-                toast.success('Recording started!');
-                window.close();
-            } catch (error) {
-                console.error('[DemoDojo] Screen capture error:', error);
-                toast.error('Screen capture was cancelled or failed');
-            }
         } catch (error) {
             console.error('[DemoDojo] Setup error:', error);
             setIsCountingDown(false);
@@ -342,4 +325,4 @@ const Popup = () => {
     );
 };
 
-export default Popup; 
+export default Popup;
