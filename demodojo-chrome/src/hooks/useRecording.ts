@@ -3,6 +3,19 @@ import { sendToBackground } from "@plasmohq/messaging"
 
 type RecordingState = "idle" | "selecting" | "countdown" | "recording" | "paused" | "completed"
 
+// Setup logging
+const log = {
+    debug: (...args: any[]) => console.debug("[DemoDojo:Hook]", ...args),
+    info: (...args: any[]) => console.info("[DemoDojo:Hook]", ...args),
+    warn: (...args: any[]) => console.warn("[DemoDojo:Hook]", ...args),
+    error: (...args: any[]) => console.error("[DemoDojo:Hook]", ...args)
+}
+
+const getCurrentTabId = async (): Promise<number> => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+    return tab?.id
+}
+
 export function useRecording() {
     const [state, setState] = useState<RecordingState>("idle")
     const [clickCount, setClickCount] = useState(0)
@@ -10,10 +23,31 @@ export function useRecording() {
     const [videoUrl, setVideoUrl] = useState<string>("")
     const [stream, setStream] = useState<MediaStream | null>(null)
 
+    // Log state changes
+    useEffect(() => {
+        log.info("Recording state changed:", state)
+    }, [state])
+
+    // Handle tab visibility
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            log.debug("Tab visibility changed:", document.visibilityState)
+            if (document.visibilityState === "visible" && state === "recording") {
+                log.info("Tab visible, re-rendering recording interface")
+                setState("paused")
+                setTimeout(() => setState("recording"), 0)
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityChange)
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }, [state])
+
     useEffect(() => {
         let interval: NodeJS.Timeout
 
         if (state === "recording") {
+            console.log("[DemoDojo] Starting duration timer")
             interval = setInterval(() => {
                 setDuration((prev) => prev + 1)
             }, 1000)
@@ -21,25 +55,121 @@ export function useRecording() {
 
         return () => {
             if (interval) {
+                console.log("[DemoDojo] Cleaning up duration timer")
                 clearInterval(interval)
             }
         }
     }, [state])
 
+    const reset = useCallback(() => {
+        setState("idle")
+        setClickCount(0)
+        setDuration(0)
+        setVideoUrl("")
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop())
+            setStream(null)
+        }
+    }, [stream])
+
     const startScreenSelection = useCallback(async () => {
         try {
+            log.info("Starting screen selection")
             setState("selecting")
+
+            // Request screen share with optimized settings
             const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
+                video: {
+                    displaySurface: "monitor",
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                },
+                // @ts-ignore - Chrome specific options
+                preferCurrentTab: false,
+                systemAudio: "include"
             })
+
+            log.info("Screen selected successfully")
+
+            // Validate stream
+            if (!mediaStream || !mediaStream.getVideoTracks().length) {
+                throw new Error("No video track available")
+            }
+
             setStream(mediaStream)
-            setState("countdown")
+
+            // Get current tab ID before starting recording
+            const tabId = await getCurrentTabId()
+            if (!tabId) {
+                throw new Error("Could not get current tab ID")
+            }
+
+            log.info("Starting recording with tabId:", tabId)
+            const track = mediaStream.getVideoTracks()[0]
+
+            // Create MediaRecorder instance
+            const mediaRecorder = new MediaRecorder(mediaStream, {
+                mimeType: "video/webm;codecs=vp9"
+            })
+
+            let recordedChunks: Blob[] = []
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data)
+                }
+            }
+
+            mediaRecorder.onstop = async () => {
+                log.info("Recording stopped, creating blob")
+                const blob = new Blob(recordedChunks, { type: "video/webm" })
+                const url = URL.createObjectURL(blob)
+                setVideoUrl(url)
+                setState("completed")
+            }
+
+            // Start recording
+            mediaRecorder.start(1000) // Record in 1-second chunks
+            log.info("Recording started successfully")
+            setState("recording")
+
+            // Handle stream stop event
+            track.onended = () => {
+                log.info("Screen share stopped by user")
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop()
+                }
+                reset()
+            }
+
+            // Handle stream errors
+            mediaStream.addEventListener('inactive', () => {
+                log.warn("Stream became inactive")
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop()
+                }
+                reset()
+            })
+
+            // Store mediaRecorder in a ref or state if needed
+            // @ts-ignore - Adding mediaRecorder to stream for cleanup
+            mediaStream.recorder = mediaRecorder
+
         } catch (error) {
-            console.error("Failed to get screen:", error)
+            log.error("Failed to get screen or start recording:", error)
             setState("idle")
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop())
+                setStream(null)
+            }
         }
-    }, [])
+    }, [reset])
 
     const startRecording = useCallback(async () => {
         if (!stream) {
@@ -80,75 +210,48 @@ export function useRecording() {
 
     const stopRecording = useCallback(async () => {
         try {
-            const response = await sendToBackground({
-                name: "recording",
-                body: {
-                    type: "STOP_RECORDING"
-                }
-            })
-
-            if (response.success) {
-                setState("completed")
-                if (response.url) setVideoUrl(response.url)
-            } else {
-                throw new Error(response.error)
-            }
-        } catch (error) {
-            console.error("Failed to stop recording:", error)
-        } finally {
             if (stream) {
+                // @ts-ignore - Accessing stored mediaRecorder
+                const mediaRecorder = stream.recorder
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop()
+                }
                 stream.getTracks().forEach(track => track.stop())
                 setStream(null)
             }
+        } catch (error) {
+            log.error("Failed to stop recording:", error)
+            setState("idle")
         }
     }, [stream])
 
     const pauseRecording = useCallback(async () => {
         try {
-            const response = await sendToBackground({
-                name: "recording",
-                body: {
-                    type: "PAUSE_RECORDING"
+            if (stream) {
+                // @ts-ignore - Accessing stored mediaRecorder
+                const mediaRecorder = stream.recorder
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.pause()
+                    setState("paused")
                 }
-            })
-
-            if (response.success) {
-                setState("paused")
-            } else {
-                throw new Error(response.error)
             }
         } catch (error) {
-            console.error("Failed to pause recording:", error)
+            log.error("Failed to pause recording:", error)
         }
-    }, [])
+    }, [stream])
 
     const resumeRecording = useCallback(async () => {
         try {
-            const response = await sendToBackground({
-                name: "recording",
-                body: {
-                    type: "RESUME_RECORDING"
+            if (stream) {
+                // @ts-ignore - Accessing stored mediaRecorder
+                const mediaRecorder = stream.recorder
+                if (mediaRecorder && mediaRecorder.state === "paused") {
+                    mediaRecorder.resume()
+                    setState("recording")
                 }
-            })
-
-            if (response.success) {
-                setState("recording")
-            } else {
-                throw new Error(response.error)
             }
         } catch (error) {
-            console.error("Failed to resume recording:", error)
-        }
-    }, [])
-
-    const reset = useCallback(() => {
-        setState("idle")
-        setClickCount(0)
-        setDuration(0)
-        setVideoUrl("")
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop())
-            setStream(null)
+            log.error("Failed to resume recording:", error)
         }
     }, [stream])
 
@@ -164,9 +267,4 @@ export function useRecording() {
         resumeRecording,
         reset
     }
-}
-
-async function getCurrentTabId(): Promise<number> {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    return tab.id
 } 

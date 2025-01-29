@@ -12,17 +12,25 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({
     const [count, setCount] = useState(duration)
 
     useEffect(() => {
-        if (count === 0) {
-            onComplete()
-            return
-        }
+        console.log("[DemoDojo] Starting countdown from", duration)
 
         const timer = setTimeout(() => {
-            setCount((prev) => prev - 1)
+            if (count <= 1) {
+                console.log("[DemoDojo] Countdown complete, triggering onComplete")
+                setCount(0)
+                onComplete()
+                return
+            }
+
+            console.log("[DemoDojo] Countdown tick:", count - 1)
+            setCount(count - 1)
         }, 1000)
 
-        return () => clearTimeout(timer)
-    }, [count, onComplete])
+        return () => {
+            console.log("[DemoDojo] Cleaning up countdown timer")
+            clearTimeout(timer)
+        }
+    }, [count, onComplete, duration])
 
     return (
         <div className="plasmo-fixed plasmo-inset-0 plasmo-flex plasmo-items-center plasmo-justify-center plasmo-bg-black/50 plasmo-z-50">
