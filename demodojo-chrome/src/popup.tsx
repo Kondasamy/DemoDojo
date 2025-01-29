@@ -61,9 +61,9 @@ function IndexPopup() {
   }
 
   return (
-    <div className="plasmo-w-[400px] plasmo-min-h-[300px] plasmo-bg-white dark:plasmo-bg-gray-900">
+    <div className="plasmo-w-[400px] plasmo-min-h-[300px] plasmo-bg-gradient-to-br plasmo-from-white plasmo-to-gray-50 dark:plasmo-from-gray-900 dark:plasmo-to-gray-800 plasmo-rounded-xl plasmo-shadow-lg plasmo-backdrop-blur-sm plasmo-bg-opacity-95 dark:plasmo-bg-opacity-90 plasmo-p-4">
       {state === "idle" && (
-        <WelcomeScreen onStartRecording={handleStartRecording} />
+        <WelcomeScreen onStartRecording={startScreenSelection} />
       )}
 
       {state === "countdown" && (
@@ -72,12 +72,13 @@ function IndexPopup() {
 
       {(state === "recording" || state === "paused") && (
         <RecordingInterface
-          isPaused={state === "paused"}
-          clickCount={clickCount}
+          state={state}
           duration={duration}
+          clickCount={clickCount}
           onPauseResume={handlePauseResume}
-          onStop={handleStop}
-          onCancel={reset}
+          onStop={stopRecording}
+          onFinish={stopRecording}
+          isLight={true}
         />
       )}
 

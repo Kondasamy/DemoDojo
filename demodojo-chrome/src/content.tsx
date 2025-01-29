@@ -70,12 +70,13 @@ const PlasmoOverlay = () => {
     <div className="plasmo-fixed plasmo-top-4 plasmo-right-4 plasmo-z-50">
       {isRecording && (
         <RecordingInterface
-          isPaused={!isRecording}
-          clickCount={clickCount}
+          state={isRecording ? "recording" : "paused"}
           duration={duration}
+          clickCount={clickCount}
           onPauseResume={() => chrome.runtime.sendMessage({ type: isRecording ? "PAUSE_RECORDING" : "RESUME_RECORDING" })}
           onStop={() => chrome.runtime.sendMessage({ type: "STOP_RECORDING" })}
-          onCancel={() => chrome.runtime.sendMessage({ type: "STOP_RECORDING" })}
+          onFinish={() => chrome.runtime.sendMessage({ type: "STOP_RECORDING" })}
+          isLight={true}
         />
       )}
     </div>

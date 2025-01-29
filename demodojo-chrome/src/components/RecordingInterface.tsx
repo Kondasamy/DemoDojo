@@ -1,94 +1,176 @@
 import React from "react"
-import { Button } from "./ui/Button"
+import { PauseIcon, PlayIcon, StopIcon, CheckIcon } from "@heroicons/react/24/outline"
 
 interface RecordingInterfaceProps {
-    isPaused: boolean
-    clickCount: number
+    state: "recording" | "paused"
     duration: number
+    clickCount: number
     onPauseResume: () => void
     onStop: () => void
-    onCancel: () => void
+    onFinish: () => void
+    isLight?: boolean
 }
 
 export const RecordingInterface: React.FC<RecordingInterfaceProps> = ({
-    isPaused,
-    clickCount,
+    state,
     duration,
+    clickCount,
     onPauseResume,
     onStop,
-    onCancel
+    onFinish,
+    isLight = true
 }) => {
-    const formatTime = (seconds: number): string => {
-        const minutes = Math.floor(seconds / 60)
-        const remainingSeconds = seconds % 60
-        return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
+    const formatDuration = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins.toString().padStart(2, "0")}:${secs
+            .toString()
+            .padStart(2, "0")}`
     }
 
+    const isPaused = state === "paused"
+
     return (
-        <div className="plasmo-fixed plasmo-top-4 plasmo-right-4 plasmo-bg-white dark:plasmo-bg-gray-800 plasmo-rounded-lg plasmo-shadow-lg plasmo-p-4 plasmo-w-64">
-            <div className="plasmo-flex plasmo-items-center plasmo-justify-between plasmo-mb-4">
-                <div className="plasmo-flex plasmo-items-center plasmo-gap-2">
-                    <div className="plasmo-w-3 plasmo-h-3 plasmo-rounded-full plasmo-bg-red-500 plasmo-animate-pulse" />
-                    <span className="plasmo-text-sm plasmo-font-medium plasmo-text-gray-700 dark:plasmo-text-gray-300">
-                        Recording
+        <div className="plasmo-fixed plasmo-inset-0 plasmo-flex plasmo-items-center plasmo-justify-center">
+            <div className={`plasmo-w-[360px] plasmo-space-y-4 plasmo-rounded-lg plasmo-p-4 ${isLight ? "plasmo-bg-gray-50" : "plasmo-bg-gray-800"
+                }`}>
+                {/* Recording Status */}
+                <div className="plasmo-flex plasmo-items-center plasmo-justify-between">
+                    <div className="plasmo-flex plasmo-items-center plasmo-space-x-2">
+                        <div className="plasmo-flex plasmo-h-3 plasmo-w-3 plasmo-items-center">
+                            <div
+                                className={`
+                                plasmo-h-3 plasmo-w-3 plasmo-rounded-full
+                                ${isPaused
+                                        ? "plasmo-bg-yellow-500"
+                                        : "plasmo-animate-pulse plasmo-bg-red-500"
+                                    }
+                            `}
+                            />
+                        </div>
+                        <span
+                            className={`plasmo-text-sm plasmo-font-medium ${isLight
+                                ? "plasmo-text-gray-900"
+                                : "plasmo-text-white"
+                                }`}>
+                            {isPaused
+                                ? "Recording Paused"
+                                : "Recording in Progress"}
+                        </span>
+                    </div>
+                    <span
+                        className={`plasmo-text-sm ${isLight
+                            ? "plasmo-text-gray-600"
+                            : "plasmo-text-gray-300"
+                            }`}>
+                        {formatDuration(duration)}
                     </span>
                 </div>
-                <span className="plasmo-text-sm plasmo-font-medium plasmo-text-gray-700 dark:plasmo-text-gray-300">
-                    {formatTime(duration)}
-                </span>
-            </div>
 
-            <div className="plasmo-mb-4">
-                <div className="plasmo-flex plasmo-items-center plasmo-gap-2 plasmo-text-sm plasmo-text-gray-600 dark:plasmo-text-gray-400">
-                    <svg
-                        className="plasmo-w-4 plasmo-h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-                        />
-                    </svg>
-                    <span>{clickCount} Clicks Recorded</span>
+                {/* Click Counter */}
+                <div
+                    className={`plasmo-rounded-md plasmo-bg-opacity-50 plasmo-p-2 ${isLight
+                        ? "plasmo-bg-gray-100"
+                        : "plasmo-bg-gray-700"
+                        }`}>
+                    <p
+                        className={`plasmo-text-center plasmo-text-sm ${isLight
+                            ? "plasmo-text-gray-600"
+                            : "plasmo-text-gray-300"
+                            }`}>
+                        <span className="plasmo-font-bold">
+                            {clickCount}
+                        </span>{" "}
+                        Clicks Recorded
+                    </p>
                 </div>
-            </div>
 
-            <div className="plasmo-flex plasmo-items-center plasmo-gap-2">
-                <Button
-                    onClick={onPauseResume}
-                    variant="secondary"
-                    size="sm"
-                    className="plasmo-flex-1">
-                    {isPaused ? "Resume" : "Pause"}
-                </Button>
-                <Button onClick={onStop} variant="primary" size="sm" className="plasmo-flex-1">
-                    Stop
-                </Button>
-                <Button
-                    onClick={onCancel}
-                    variant="danger"
-                    size="sm"
-                    className="plasmo-flex-1">
-                    Cancel
-                </Button>
-            </div>
+                {/* Control Buttons */}
+                <div className="plasmo-flex plasmo-justify-center plasmo-space-x-4">
+                    <button
+                        onClick={onPauseResume}
+                        onKeyDown={(e) =>
+                            e.key === "Enter" && onPauseResume()
+                        }
+                        className={`
+                            plasmo-flex plasmo-items-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-4 plasmo-py-2 plasmo-text-sm plasmo-font-medium
+                            plasmo-transition-colors plasmo-duration-200
+                            ${isLight
+                                ? "plasmo-bg-white plasmo-text-gray-700 hover:plasmo-bg-gray-100"
+                                : "plasmo-bg-gray-700 plasmo-text-white hover:plasmo-bg-gray-600"
+                            }
+                            focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-blue-500 focus:plasmo-ring-offset-2
+                        `}
+                        tabIndex={0}
+                        aria-label={
+                            isPaused
+                                ? "Resume Recording"
+                                : "Pause Recording"
+                        }>
+                        {isPaused ? (
+                            <PlayIcon className="plasmo-h-5 plasmo-w-5" />
+                        ) : (
+                            <PauseIcon className="plasmo-h-5 plasmo-w-5" />
+                        )}
+                        <span>
+                            {isPaused ? "Resume" : "Pause"}
+                        </span>
+                    </button>
 
-            <div className="plasmo-mt-4 plasmo-text-xs plasmo-text-gray-500 dark:plasmo-text-gray-400">
-                <div className="plasmo-flex plasmo-items-center plasmo-gap-2">
-                    <span>Shortcuts:</span>
-                    <kbd className="plasmo-px-2 plasmo-py-1 plasmo-bg-gray-100 dark:plasmo-bg-gray-700 plasmo-rounded">
-                        Space
-                    </kbd>
-                    <span>to pause/resume</span>
+                    <button
+                        onClick={onStop}
+                        onKeyDown={(e) => e.key === "Enter" && onStop()}
+                        className={`
+                            plasmo-flex plasmo-items-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-4 plasmo-py-2 plasmo-text-sm plasmo-font-medium plasmo-text-white
+                            plasmo-transition-colors plasmo-duration-200 plasmo-bg-red-500 hover:plasmo-bg-red-600
+                            focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-red-500 focus:plasmo-ring-offset-2
+                        `}
+                        tabIndex={0}
+                        aria-label="Stop Recording">
+                        <StopIcon className="plasmo-h-5 plasmo-w-5" />
+                        <span>Stop</span>
+                    </button>
+
+                    <button
+                        onClick={onFinish}
+                        onKeyDown={(e) => e.key === "Enter" && onFinish()}
+                        className={`
+                            plasmo-flex plasmo-items-center plasmo-space-x-2 plasmo-rounded-md plasmo-px-4 plasmo-py-2 plasmo-text-sm plasmo-font-medium plasmo-text-white
+                            plasmo-transition-colors plasmo-duration-200 plasmo-bg-green-500 hover:plasmo-bg-green-600
+                            focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-green-500 focus:plasmo-ring-offset-2
+                        `}
+                        tabIndex={0}
+                        aria-label="Finish Recording">
+                        <CheckIcon className="plasmo-h-5 plasmo-w-5" />
+                        <span>Finish</span>
+                    </button>
                 </div>
-                <div className="plasmo-flex plasmo-items-center plasmo-gap-2 plasmo-mt-1">
-                    <kbd className="plasmo-px-2 plasmo-py-1 plasmo-bg-gray-100 dark:plasmo-bg-gray-700 plasmo-rounded">
-                        Esc
-                    </kbd>
-                    <span>to stop recording</span>
+
+                {/* Keyboard Shortcuts */}
+                <div
+                    className={`plasmo-mt-4 plasmo-text-xs ${isLight
+                        ? "plasmo-text-gray-500"
+                        : "plasmo-text-gray-400"
+                        }`}>
+                    <p className="plasmo-text-center">
+                        Press{" "}
+                        <kbd
+                            className={`plasmo-rounded-md plasmo-border plasmo-px-2 plasmo-py-0.5 ${isLight
+                                ? "plasmo-border-gray-300 plasmo-bg-gray-100"
+                                : "plasmo-border-gray-600 plasmo-bg-gray-800"
+                                }`}>
+                            Space
+                        </kbd>{" "}
+                        to pause/resume,{" "}
+                        <kbd
+                            className={`plasmo-rounded-md plasmo-border plasmo-px-2 plasmo-py-0.5 ${isLight
+                                ? "plasmo-border-gray-300 plasmo-bg-gray-100"
+                                : "plasmo-border-gray-600 plasmo-bg-gray-800"
+                                }`}>
+                            Esc
+                        </kbd>{" "}
+                        to stop
+                    </p>
                 </div>
             </div>
         </div>

@@ -92,15 +92,21 @@ export function useRecording() {
                 },
                 // @ts-ignore - Chrome specific options
                 preferCurrentTab: false,
-                systemAudio: "include"
+                systemAudio: "include",
+                selfBrowserSurface: "exclude" // Prevent recording from stopping when clicking extension
             })
 
             log.info("Screen selected successfully")
 
             // Validate stream
-            if (!mediaStream || !mediaStream.getVideoTracks().length) {
+            if (!mediaStream || !mediaStream.getVideoTracks()[0]) {
                 throw new Error("No video track available")
             }
+
+            // Configure video track to prevent stopping on clicks
+            const videoTrack = mediaStream.getVideoTracks()[0]
+            videoTrack.contentHint = "motion"
+            videoTrack.enabled = true
 
             setStream(mediaStream)
 
@@ -111,7 +117,6 @@ export function useRecording() {
             }
 
             log.info("Starting recording with tabId:", tabId)
-            const track = mediaStream.getVideoTracks()[0]
 
             // Create MediaRecorder instance
             const mediaRecorder = new MediaRecorder(mediaStream, {
@@ -139,23 +144,14 @@ export function useRecording() {
             log.info("Recording started successfully")
             setState("recording")
 
-            // Handle stream stop event
-            track.onended = () => {
-                log.info("Screen share stopped by user")
+            // Only handle explicit stop events
+            videoTrack.onended = () => {
+                log.info("Screen share explicitly stopped by user")
                 if (mediaRecorder && mediaRecorder.state !== "inactive") {
                     mediaRecorder.stop()
                 }
                 reset()
             }
-
-            // Handle stream errors
-            mediaStream.addEventListener('inactive', () => {
-                log.warn("Stream became inactive")
-                if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                    mediaRecorder.stop()
-                }
-                reset()
-            })
 
             // Store mediaRecorder in a ref or state if needed
             // @ts-ignore - Adding mediaRecorder to stream for cleanup
