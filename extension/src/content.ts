@@ -1,10 +1,26 @@
+import {
+    START_RECORDING,
+    START_RECORDING_BACKGROUND,
+    STOP_RECORDING,
+    PAUSE_RECORDING,
+    RESUME_RECORDING,
+    RECORDING_STARTED,
+    RECORDING_COMPLETED,
+    RECORDING_STARTED_CONTENT,
+    RECORDING_COMPLETED_CONTENT,
+    RECORDING_PAUSED,
+    RECORDING_RESUMED,
+    RECORDING_STOPPED,
+    UPDATE_CLICK_COUNT,
+} from './lib/messages';
+
 console.log('[DemoDojo] Content script loaded');
 
 interface RecordingSettings {
     audio: boolean;
     hideBrowserUI: boolean;
     microphone: MediaDeviceInfo | null;
-    recordingMode: 'tab' | 'desktop' | 'area'
+    recordingMode: 'tab' | 'desktop' | 'area';
 }
 
 interface Message {
@@ -24,18 +40,21 @@ let clickCount = 0;
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
     console.log('[DemoDojo] Content script received message:', message);
 
-    if (message.type === 'START_RECORDING' && message.settings) {
+    if (message.type === START_RECORDING && message.settings) {
         console.log('[DemoDojo] Starting recording with settings:', message.settings);
+
+        // Forward the message to the background service worker
         chrome.runtime.sendMessage({
-            type: 'start-recording',
+            type: START_RECORDING_BACKGROUND,
             target: 'background',
-            data: message.settings
+            data: message.settings,
         });
+
         sendResponse({ success: true });
-        return true; // Keep the message channel open for the async response
+        return true; // Keep the message channel open for async response
     }
 
-    if (message.type === 'STOP_RECORDING') {
+    if (message.type === STOP_RECORDING) {
         console.log('[DemoDojo] Stopping recording');
         stopRecording()
             .then((videoUrl) => {
@@ -49,16 +68,16 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
 
         return true;
     }
-    if (message.type === 'recording-started') {
+    if (message.type === RECORDING_STARTED) {
         console.log('[DemoDojo] Recording started from offscreen');
-        chrome.runtime.sendMessage({ type: 'RECORDING_STARTED_CONTENT' });
+        chrome.runtime.sendMessage({ type: RECORDING_STARTED_CONTENT });
     }
 
-    if (message.type === 'recording-completed') {
+    if (message.type === RECORDING_COMPLETED) {
         console.log('[DemoDojo] Recording completed from offscreen', message.videoUrl);
-        chrome.runtime.sendMessage({ type: 'RECORDING_COMPLETED_CONTENT', videoUrl: message.videoUrl });
+        chrome.runtime.sendMessage({ type: RECORDING_COMPLETED_CONTENT, videoUrl: message.videoUrl });
     }
-    if (message.type === 'PAUSE_RECORDING') {
+    if (message.type === PAUSE_RECORDING) {
         console.log('[DemoDojo] Pausing recording');
         if (mediaRecorder) {
             if ((mediaRecorder as MediaRecorder).state === 'recording') {
@@ -75,7 +94,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
         return true;
     }
 
-    if (message.type === 'RESUME_RECORDING') {
+    if (message.type === RESUME_RECORDING) {
         console.log('[DemoDojo] Resuming recording');
         if (mediaRecorder) {
             if ((mediaRecorder as MediaRecorder).state === 'paused') {
@@ -100,7 +119,7 @@ document.addEventListener('click', () => {
             clickCount++;
             // Send click count update to popup
             chrome.runtime.sendMessage({
-                type: 'UPDATE_CLICK_COUNT',
+                type: UPDATE_CLICK_COUNT,
                 count: clickCount
             });
         }
@@ -149,17 +168,17 @@ document.addEventListener('keydown', (event: KeyboardEvent) => {
         event.preventDefault();
         if ((mediaRecorder as MediaRecorder).state === 'recording') {
             (mediaRecorder as MediaRecorder).pause();
-            chrome.runtime.sendMessage({ type: 'RECORDING_PAUSED' });
+            chrome.runtime.sendMessage({ type: RECORDING_PAUSED });
         } else if ((mediaRecorder as MediaRecorder).state === 'paused') {
             (mediaRecorder as MediaRecorder).resume();
-            chrome.runtime.sendMessage({ type: 'RECORDING_RESUMED' });
+            chrome.runtime.sendMessage({ type: RECORDING_RESUMED });
         }
     } else if (event.code === 'Escape' && !event.repeat) {
         event.preventDefault();
         stopRecording()
             .then(videoUrl => {
                 chrome.runtime.sendMessage({
-                    type: 'RECORDING_STOPPED',
+                    type: RECORDING_STOPPED,
                     videoUrl
                 });
             })

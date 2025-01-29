@@ -3,6 +3,16 @@
 /// <reference types="chrome" />
 
 declare const self: ServiceWorkerGlobalScope;
+import {
+    START_RECORDING,
+    START_RECORDING_BACKGROUND,
+    START_RECORDING_OFFSCREEN,
+    RECORDING_COMPLETED,
+    RECORDING_STARTED,
+    GET_TAB_INFO,
+    FROM_CONTENT
+} from './lib/messages';
+
 
 type Message = {
     type: string;
@@ -69,7 +79,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
         // Send the stream ID to the offscreen document to start recording
         chrome.runtime.sendMessage({
-            type: 'start-recording',
+            type: START_RECORDING,
             target: 'offscreen',
             data: {
                 streamId,
@@ -92,18 +102,18 @@ chrome.runtime.onMessage.addListener(
         console.log('[DemoDojo] Received message:', { message, from: sender?.tab?.id });
 
         switch (message.type) {
-            case 'FROM_CONTENT':
+            case FROM_CONTENT:
                 console.log('[DemoDojo] Content script message:', message.data);
                 sendResponse({ status: 'received' });
                 break;
-            case 'recording-started':
-            case 'recording-completed':
+            case RECORDING_STARTED:
+            case RECORDING_COMPLETED:
                 // Forward recording state changes to popup
                 chrome.runtime.sendMessage(message).catch((error) => {
                     console.error('[DemoDojo] Error forwarding recording state:', error);
                 });
                 break;
-            case 'GET_TAB_INFO':
+            case GET_TAB_INFO:
                 chrome.tabs
                     .query({ active: true, currentWindow: true })
                     .then((tabs) => {
@@ -114,7 +124,7 @@ chrome.runtime.onMessage.addListener(
                         sendResponse({ error: error.message });
                     });
                 return true;
-            case 'start-recording':
+            case START_RECORDING:
                 console.log('[DemoDojo] Content script message start recording:', message);
                 // Forward start recording message to content script
                 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -125,6 +135,56 @@ chrome.runtime.onMessage.addListener(
                     }
                 });
 
+                break;
+            case START_RECORDING_BACKGROUND:
+                console.log('[DemoDojo] Background received start recording message:', message.data);
+
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        console.error('[DemoDojo] No active tab found');
+                        return;
+                    }
+
+                    const tab = tabs[0];
+                    if (!tab.id) {
+                        console.error('[DemoDojo] Tab ID is undefined');
+                        return;
+                    }
+
+                    try {
+                        // Create an offscreen document if it doesn't exist
+                        const existingContexts = await chrome.runtime.getContexts({});
+                        const offscreenDocument = existingContexts.find(
+                            (c) => c.contextType === chrome.runtime.ContextType.OFFSCREEN_DOCUMENT
+                        );
+
+                        if (!offscreenDocument) {
+                            await chrome.offscreen.createDocument({
+                                url: 'src/offscreen.html',
+                                reasons: [chrome.offscreen.Reason.USER_MEDIA],
+                                justification: 'Recording from chrome.tabCapture API',
+                            });
+                        }
+
+                        // Get the media stream ID
+                        const streamId = await getMediaStreamId(tab.id);
+
+                        // Send the stream ID to the offscreen document to start recording
+                        chrome.runtime.sendMessage({
+                            type: START_RECORDING_OFFSCREEN,
+                            target: 'offscreen',
+                            data: {
+                                streamId,
+                                width: tab.width,
+                                height: tab.height,
+                                ...message.data,
+                            },
+                        });
+                    } catch (error) {
+                        console.error('[DemoDojo] Failed to start recording:', error);
+                    }
+                });
                 break;
             default:
                 console.warn('[DemoDojo] Unknown message type:', message.type);

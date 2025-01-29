@@ -6,12 +6,20 @@ import { RecordingSettings } from './components/RecordingSettings';
 import { CountdownTimer } from './components/CountdownTimer';
 import { RecordingInterface } from './components/RecordingInterface';
 import { PostRecordingScreen } from './components/PostRecordingScreen';
+import {
+    START_RECORDING,
+    STOP_RECORDING,
+    PAUSE_RECORDING,
+    RESUME_RECORDING,
+    RECORDING_COMPLETED_CONTENT,
+    RECORDING_STARTED_CONTENT,
+} from './lib/messages';
 
 interface RecordingSettings {
     audio: boolean;
     hideBrowserUI: boolean;
     microphone: MediaDeviceInfo | null;
-    recordingMode: 'tab' | 'desktop' | 'area'
+    recordingMode: 'tab' | 'desktop' | 'area';
 }
 
 interface RecordingState {
@@ -46,7 +54,7 @@ const Popup = () => {
         audio: false,
         hideBrowserUI: false,
         microphone: null,
-        recordingMode: 'tab'
+        recordingMode: 'tab',
     });
 
     // Theme detection
@@ -143,14 +151,14 @@ const Popup = () => {
     // Message listener for the recording start, stop events
     useEffect(() => {
         const handleContentMessages = (message: any) => {
-            if (message.type === 'RECORDING_STARTED_CONTENT') {
+            if (message.type === RECORDING_STARTED_CONTENT) {
                 console.log('[DemoDojo] Recording started from content script');
                 setRecordingState(prev => ({ ...prev, isRecording: true }));
                 setScreenState('recording');
                 toast.success('Recording started!');
                 window.close();
             }
-            if (message.type === 'RECORDING_COMPLETED_CONTENT') {
+            if (message.type === RECORDING_COMPLETED_CONTENT) {
                 console.log('[DemoDojo] Recording completed from content script', message.videoUrl);
                 setRecordedVideoUrl(message.videoUrl);
                 setScreenState('post-recording');
@@ -214,9 +222,9 @@ const Popup = () => {
             }
 
             chrome.runtime.sendMessage({
-                type: 'start-recording',
+                type: START_RECORDING,
                 target: 'background',
-                data: settings
+                data: settings,
             });
 
 
@@ -236,7 +244,7 @@ const Popup = () => {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab?.id) return;
 
-            const message = recordingState.isPaused ? 'RESUME_RECORDING' : 'PAUSE_RECORDING';
+            const message = recordingState.isPaused ? RESUME_RECORDING : PAUSE_RECORDING;
             await chrome.tabs.sendMessage(tab.id, { type: message });
 
             setRecordingState(prev => ({ ...prev, isPaused: !prev.isPaused }));
@@ -251,7 +259,7 @@ const Popup = () => {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab?.id) return;
 
-            const response = await chrome.tabs.sendMessage(tab.id, { type: 'STOP_RECORDING' });
+            const response = await chrome.tabs.sendMessage(tab.id, { type: STOP_RECORDING });
             if (response?.videoUrl) {
                 setRecordedVideoUrl(response.videoUrl);
                 setScreenState('post-recording');
