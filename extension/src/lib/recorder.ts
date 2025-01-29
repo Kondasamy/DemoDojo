@@ -46,12 +46,15 @@ class Recorder {
         }: RecordingOptions,
         callback?: (url: string) => void
     ) {
+        console.log('[DemoDojo] Starting recorder with options:', { streamId, width, height, audio, recordingMode });
         if (this.recorder?.state === 'recording') {
+            console.error('[DemoDojo] Cannot start - recording already in progress');
             throw new Error('Called startRecording while recording is in progress.');
         }
 
-
         const chromeMediaSource = this.getChromeMediaSource(recordingMode);
+        console.log('[DemoDojo] Using chrome media source:', chromeMediaSource);
+
         const videoConstraints: MediaTrackConstraints = {
             // @ts-ignore
             chromeMediaSource,
@@ -59,13 +62,13 @@ class Recorder {
             frameRate: frameRate,
             ...(width && {
                 width: width,
-                // maxWidth: width,
             }),
             ...(height && {
                 height: height,
-                // maxHeight: height,
             }),
         };
+
+        console.log('[DemoDojo] Configured video constraints:', videoConstraints);
 
         const mediaStreamConstraints: MediaStreamConstraints = {
             audio: audio
@@ -78,50 +81,74 @@ class Recorder {
             video: videoConstraints,
         };
 
-        this.media = await navigator.mediaDevices.getUserMedia(
-            mediaStreamConstraints
-        );
+        console.log('[DemoDojo] Requesting media stream with constraints:', mediaStreamConstraints);
+        try {
+            this.media = await navigator.mediaDevices.getUserMedia(
+                mediaStreamConstraints
+            );
+            console.log('[DemoDojo] Media stream obtained successfully');
 
-        if (audio) {
-            const audioContext = new AudioContext()
-            const audioSource = audioContext.createMediaStreamSource(this.media)
-            audioSource.connect(audioContext.destination)
-        }
+            if (audio) {
+                console.log('[DemoDojo] Setting up audio context');
+                const audioContext = new AudioContext()
+                const audioSource = audioContext.createMediaStreamSource(this.media)
+                audioSource.connect(audioContext.destination)
+                console.log('[DemoDojo] Audio context setup completed');
+            }
 
-        this.recorder = new MediaRecorder(this.media, {
-            mimeType: recorderMimeType,
-            videoBitsPerSecond: bitRate,
-        });
-
-        this.recorder.ondataavailable = (event) => {
-            this.data.push(event.data);
-        };
-        this.recorder.onstop = async () => {
-            const duration = Date.now() - this.startTime;
-            const blob = new Blob(this.data, { type: recorderMimeType });
-            // @ts-ignore
-            const fixedBlob = await fixWebmDuration(blob, duration, { logger: false })
-
-            const url = URL.createObjectURL(fixedBlob);
-            chrome.runtime.sendMessage({
-                type: 'recording-completed',
-                videoUrl: url
+            this.recorder = new MediaRecorder(this.media, {
+                mimeType: recorderMimeType,
+                videoBitsPerSecond: bitRate,
             });
-            callback?.(url)
-            this.recorder = undefined;
-            this.data = [];
-        };
-        this.recorder.onerror = (event) => {
-            console.error('MediaRecorder error:', event);
-        };
-        this.recorder.start();
-        this.startTime = Date.now();
+            console.log('[DemoDojo] MediaRecorder initialized with settings:', { mimeType: recorderMimeType, bitRate });
+
+            this.recorder.ondataavailable = (event) => {
+                console.log('[DemoDojo] Received data chunk of size:', event.data.size);
+                this.data.push(event.data);
+            };
+            this.recorder.onstop = async () => {
+                console.log('[DemoDojo] Recording stopped, processing final video');
+                const duration = Date.now() - this.startTime;
+                const blob = new Blob(this.data, { type: recorderMimeType });
+                console.log('[DemoDojo] Created initial blob, size:', blob.size);
+                // @ts-ignore
+                const fixedBlob = await fixWebmDuration(blob, duration, { logger: false })
+                console.log('[DemoDojo] Fixed WebM duration, final size:', fixedBlob.size);
+
+                const url = URL.createObjectURL(fixedBlob);
+                console.log('[DemoDojo] Created object URL for video');
+                chrome.runtime.sendMessage({
+                    type: 'recording-completed',
+                    videoUrl: url
+                });
+                callback?.(url)
+                this.recorder = undefined;
+                this.data = [];
+            };
+            this.recorder.onerror = (event) => {
+                console.error('[DemoDojo] MediaRecorder error:', event);
+            };
+            this.recorder.start();
+            this.startTime = Date.now();
+            console.log('[DemoDojo] Recording started at:', new Date(this.startTime).toISOString());
+        } catch (error) {
+            console.error('[DemoDojo] Failed to initialize recording:', error);
+            throw error;
+        }
     }
 
     public async stop() {
+        console.log('[DemoDojo] Stopping recording');
         this.recorder?.stop();
-        this.recorder?.stream.getTracks().forEach((t) => t.stop());
-        this.media?.getTracks().forEach((t) => t.stop())
+        console.log('[DemoDojo] Stopping media tracks');
+        this.recorder?.stream.getTracks().forEach((t) => {
+            t.stop();
+            console.log('[DemoDojo] Stopped track:', t.kind, t.label);
+        });
+        this.media?.getTracks().forEach((t) => {
+            t.stop();
+            console.log('[DemoDojo] Stopped media track:', t.kind, t.label);
+        })
     }
 }
 
