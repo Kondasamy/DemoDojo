@@ -1,3 +1,20 @@
+# DemoDojo Browser Extension
+
+A powerful screen recording browser extension for creating demos and tutorials.
+
+## Features
+
+- One-click screen recording
+- Pause and resume recording
+- Click tracking with visual feedback
+- Dark mode support
+- Keyboard shortcuts
+- Modern UI
+- Click ripple effects
+- Countdown timer
+
+---
+
 This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
 
 ## Getting Started
