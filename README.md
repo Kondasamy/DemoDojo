@@ -18,5 +18,5 @@ This project is split into several modules:
     - [Chrome Extension](demodojo-chrome/README.md) - the Chrome extension (minor tweak for for Edge and Brave)
     - [Firefox Extension](demodojo-firefox/README.md) - the Firefox extension - Not started
 - **Workspace App**
-    - [API](workspace/api/README.md) - the API - Not started
-    - [Database](workspace/database/README.md) - the database - Not started
+    - [API](demodojo-workspace/README.md) - the API - In Progress
+    - [Database](demodojo-workspace/database/README.md) - the database - Not started

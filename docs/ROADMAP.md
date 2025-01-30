@@ -24,6 +24,10 @@
   - [ ] Build video editor UI using Next.js, TypeScript, and TailwindCSS + Remotion
   - [ ] Implement timeline editor for trimming, copying, and deleting segments
   - [ ] Add manual zoom/pan adjustment controls
+  - [ ] Add Gradient background or custom background image. Ad some set of royalty free background images
+  - [ ] Add a set of royalty free music tracks
+  - [ ] Add option to add text overlay to the video
+  - [ ] Add option to add a logo overlay to the video
 
 - [ ] **Rendering Pipeline**
   - [ ] Integrate Rendermotion for rendering (optional)
