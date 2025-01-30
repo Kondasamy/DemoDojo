@@ -18,6 +18,7 @@ import {
     Redo2
 } from 'lucide-react';
 import EditorLayout from '../components/editor/EditorLayout';
+import { VideoComposition } from './VideoComposition';
 
 const VideoEditor = () => {
     const {
@@ -144,81 +145,92 @@ const VideoEditor = () => {
         }
     }, [currentTime, setCurrentTime]);
 
-    const VideoComposition = () => {
-        return (
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                {/* Background */}
-                {background.type === 'color' ? (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: background.value,
-                        }}
-                    />
-                ) : (
-                    <img
-                        src={background.value}
-                        alt="Background"
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                        }}
-                    />
-                )}
+    const inputProps = useMemo(() => ({
+        videoSource,
+        background,
+        textOverlays,
+        zoomLevel,
+    }), [videoSource, background, textOverlays, zoomLevel]);
 
-                {/* Video */}
-                {videoSource && (
-                    <video
-                        ref={videoRef}
-                        src={videoSource}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            position: 'relative',
-                            zIndex: 1,
-                        }}
-                    />
-                )}
+    // Add play/pause handler
+    const handlePlayPause = useCallback(() => {
+        if (playerRef) {
+            if (isPlaying) {
+                playerRef.pause();
+            } else {
+                playerRef.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    }, [isPlaying, playerRef]);
 
-                {/* Text Overlays */}
-                {textOverlays.map((overlay) => (
-                    <div
-                        key={overlay.id}
-                        style={{
-                            position: 'absolute',
-                            left: `${overlay.position.x}%`,
-                            top: `${overlay.position.y}%`,
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 2,
-                            color: 'white',
-                            textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                        }}
+    // Update the VideoTimeline component
+    const VideoTimeline = () => (
+        <div className="bg-white border-t border-gray-200 p-4 rounded-b-lg">
+            <div className="flex items-center space-x-4">
+                {/* Video Controls */}
+                <div className="flex items-center space-x-2">
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Zoom">
+                        <ZoomIn className="w-5 h-5" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Trim">
+                        <Scissors className="w-5 h-5" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Crop">
+                        <span className="w-5 h-5 flex items-center justify-center font-bold">[ ]</span>
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Delete">
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                    <div className="border-l border-gray-200 h-6 mx-2" />
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Undo">
+                        <Undo2 className="w-5 h-5" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Redo">
+                        <Redo2 className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Playback Controls */}
+                <div className="flex items-center space-x-2">
+                    <button className="p-2 rounded-lg hover:bg-gray-100">
+                        <SkipBack className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={handlePlayPause}
+                        className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-600"
                     >
-                        {overlay.text}
-                    </div>
-                ))}
+                        {isPlaying ? (
+                            <Pause className="w-5 h-5" />
+                        ) : (
+                            <Play className="w-5 h-5" />
+                        )}
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-gray-100">
+                        <SkipForward className="w-5 h-5" />
+                    </button>
+                </div>
 
-                {/* Audio */}
-                {musicTrack?.url && (
-                    <audio
-                        ref={audioRef}
-                        src={musicTrack.url}
-                        style={{ display: 'none' }}
+                {/* Timeline */}
+                <div className="flex-1">
+                    <input
+                        type="range"
+                        min={0}
+                        max={duration}
+                        value={currentTime}
+                        onChange={(e) => handleTimeUpdate(parseFloat(e.target.value))}
+                        className="w-full"
                     />
-                )}
+                </div>
+
+                {/* Time Display */}
+                <div className="text-sm text-gray-600 w-32 text-right">
+                    {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')} /
+                    {Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')}
+                </div>
             </div>
-        );
-    };
+        </div>
+    );
 
     const UploadOptions = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -256,82 +268,6 @@ const VideoEditor = () => {
                     <p className="text-sm text-gray-500">Add manual zooms and trim your video with ease</p>
                 </div>
             </button>
-        </div>
-    );
-
-    const VideoTimeline = () => (
-        <div className="bg-white border-t border-gray-200 p-4 rounded-b-lg">
-            <div className="flex items-center space-x-4">
-                {/* Video Controls */}
-                <div className="flex items-center space-x-2">
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Zoom">
-                        <ZoomIn className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Trim">
-                        <Scissors className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Crop">
-                        <span className="w-5 h-5 flex items-center justify-center font-bold">[ ]</span>
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Delete">
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                    <div className="border-l border-gray-200 h-6 mx-2" />
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Undo">
-                        <Undo2 className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100" title="Redo">
-                        <Redo2 className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Playback Controls */}
-                <div className="flex items-center space-x-2">
-                    <button className="p-2 rounded-lg hover:bg-gray-100">
-                        <SkipBack className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => {
-                            setIsPlaying(!isPlaying);
-                            if (playerRef) {
-                                if (!isPlaying) {
-                                    playerRef.play();
-                                } else {
-                                    playerRef.pause();
-                                }
-                            }
-                        }}
-                        className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-600"
-                    >
-                        {isPlaying ? (
-                            <Pause className="w-5 h-5" />
-                        ) : (
-                            <Play className="w-5 h-5" />
-                        )}
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100">
-                        <SkipForward className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Timeline */}
-                <div className="flex-1">
-                    <input
-                        type="range"
-                        min={0}
-                        max={duration}
-                        value={currentTime}
-                        onChange={(e) => handleTimeUpdate(parseFloat(e.target.value))}
-                        className="w-full"
-                    />
-                </div>
-
-                {/* Time Display */}
-                <div className="text-sm text-gray-600 w-32 text-right">
-                    {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')} /
-                    {Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')}
-                </div>
-            </div>
         </div>
     );
 
@@ -375,11 +311,14 @@ const VideoEditor = () => {
                                     height: '100%',
                                 }}
                                 controls={false}
-                                playbackRate={1}
                                 loop
-                                renderLoading={() => null}
-                                errorFallback={() => null}
+                                inputProps={inputProps}
+                                initialFrame={Math.floor(currentTime * 30)}
+                                autoPlay={false}
+                                showVolumeControls={false}
                                 clickToPlay={false}
+                                doubleClickToFullscreen={false}
+                                spaceKeyToPlayOrPause={false}
                             />
                         </div>
                         <VideoTimeline />
